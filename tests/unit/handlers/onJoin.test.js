@@ -24,13 +24,11 @@ describe('handleJoin', () => {
   it('should handle valid join message with successful API calls', async () => {
     const message = { userId: 'test123' };
 
-    // Mock successful access token response
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ access_token: 'mock_token' })
     });
 
-    // Mock successful user info response
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ 
@@ -48,7 +46,7 @@ describe('handleJoin', () => {
   });
 
   it('should warn on invalid message without userId', async () => {
-    const message = {}; // without userId
+    const message = {};
 
     await handleJoin(mockWs, message, mockLogger);
 
@@ -60,7 +58,6 @@ describe('handleJoin', () => {
   it('should handle failed access token request', async () => {
     const message = { userId: 'test123' };
 
-    // Mock failed access token response
     fetch.mockResolvedValueOnce({
       ok: false,
       statusText: 'Unauthorized',
@@ -81,11 +78,11 @@ describe('handleJoin', () => {
   it('should handle failed access token request without message', async () => {
     const message = { userId: 'test456' };
 
-    // Mock failed access token response without message
+    
     fetch.mockResolvedValueOnce({
       ok: false,
       statusText: 'Bad Request',
-      json: async () => ({}) // no message property
+      json: async () => ({}) 
     });
 
     await handleJoin(mockWs, message, mockLogger);
@@ -102,13 +99,13 @@ describe('handleJoin', () => {
   it('should handle failed user info request', async () => {
     const message = { userId: 'test123' };
 
-    // Mock successful access token response
+    
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ access_token: 'mock_token' })
     });
 
-    // Mock failed user info response
+    
     fetch.mockResolvedValueOnce({
       ok: false,
       statusText: 'Not Found',
@@ -129,17 +126,17 @@ describe('handleJoin', () => {
   it('should handle failed user info request without message', async () => {
     const message = { userId: 'test789' };
 
-    // Mock successful access token response
+    
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ access_token: 'mock_token' })
     });
 
-    // Mock failed user info response without message
+    
     fetch.mockResolvedValueOnce({
       ok: false,
       statusText: 'Forbidden',
-      json: async () => ({}) // no message property
+      json: async () => ({}) 
     });
 
     await handleJoin(mockWs, message, mockLogger);
@@ -156,17 +153,17 @@ describe('handleJoin', () => {
   it('should handle user info with no display_name', async () => {
     const message = { userId: 'test123' };
 
-    // Mock successful access token response
+    
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ access_token: 'mock_token' })
     });
 
-    // Mock user info response with no display_name
+    
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ 
-        data: [{}] // user object without display_name
+        data: [{}] 
       })
     });
 
@@ -180,17 +177,17 @@ describe('handleJoin', () => {
   it('should handle user info with empty data array', async () => {
     const message = { userId: 'test123' };
 
-    // Mock successful access token response
+    
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ access_token: 'mock_token' })
     });
 
-    // Mock user info response with empty data
+    
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ 
-        data: [] // empty array
+        data: [] 
       })
     });
 
@@ -204,7 +201,7 @@ describe('handleJoin', () => {
   it('should handle network errors', async () => {
     const message = { userId: 'test123' };
 
-    // Mock network error
+    
     fetch.mockRejectedValueOnce(new Error('Network error'));
 
     await handleJoin(mockWs, message, mockLogger);

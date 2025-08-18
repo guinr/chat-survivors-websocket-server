@@ -99,7 +99,7 @@ describe('wsServer', () => {
 
       createWsServer({ port: 8080, logger: mockLogger });
 
-      // Get the registered connection handler
+      
       const connectionCall = mockWss.on.mock.calls.find(call => call[0] === 'connection');
       connectionHandler = connectionCall[1];
     });
@@ -138,11 +138,11 @@ describe('wsServer', () => {
       it('should set isAlive to true on pong', () => {
         connectionHandler(mockWs);
 
-        // Get the registered pong handler
+        
         const pongCall = mockWs.on.mock.calls.find(call => call[0] === 'pong');
         const pongHandler = pongCall[1];
 
-        // Simulate receiving pong
+        
         mockWs.isAlive = false;
         pongHandler();
 
@@ -154,7 +154,7 @@ describe('wsServer', () => {
       it('should route message through eventRouter', () => {
         connectionHandler(mockWs);
 
-        // Get the registered message handler
+        
         const messageCall = mockWs.on.mock.calls.find(call => call[0] === 'message');
         const messageHandler = messageCall[1];
 
@@ -186,7 +186,7 @@ describe('wsServer', () => {
       it('should remove connection from connectionManager on close', () => {
         connectionHandler(mockWs);
 
-        // Get the registered close handler
+        
         const closeCall = mockWs.on.mock.calls.find(call => call[0] === 'close');
         const closeHandler = closeCall[1];
 
@@ -201,7 +201,7 @@ describe('wsServer', () => {
         const closeCall = mockWs.on.mock.calls.find(call => call[0] === 'close');
         const closeHandler = closeCall[1];
 
-        // Simulate multiple close events (edge case)
+        
         closeHandler();
         closeHandler();
 
@@ -213,7 +213,7 @@ describe('wsServer', () => {
       it('should log error and remove connection on error', () => {
         connectionHandler(mockWs);
 
-        // Get the registered error handler
+        
         const errorCall = mockWs.on.mock.calls.find(call => call[0] === 'error');
         const errorHandler = errorCall[1];
 
@@ -233,7 +233,7 @@ describe('wsServer', () => {
         const errorCall = mockWs.on.mock.calls.find(call => call[0] === 'error');
         const errorHandler = errorCall[1];
 
-        // Test different types of errors
+        
         const errors = [
           new Error('Network error'),
           new Error('Protocol error'),
@@ -272,8 +272,8 @@ describe('wsServer', () => {
       expect(mockWs2.isAlive).toBe(true);
       expect(mockWs3.isAlive).toBe(true);
 
-      // Each connection should have its own event listeners
-      expect(mockWs1.on).toHaveBeenCalledTimes(4); // pong, message, close, error
+      
+      expect(mockWs1.on).toHaveBeenCalledTimes(4); 
       expect(mockWs2.on).toHaveBeenCalledTimes(4);
       expect(mockWs3.on).toHaveBeenCalledTimes(4);
     });
@@ -285,9 +285,9 @@ describe('wsServer', () => {
       connectionHandler(mockWs1);
       connectionHandler(mockWs2);
 
-      // Simulate closing a connection
+      
       const closeCall1 = mockWs1.on.mock.calls.find(call => call[0] === 'close');
-      closeCall1[1](); // Call close handler
+      closeCall1[1](); 
 
       expect(connectionManager.remove).toHaveBeenCalledWith(mockWs1);
       expect(connectionManager.remove).not.toHaveBeenCalledWith(mockWs2);
@@ -311,7 +311,7 @@ describe('wsServer', () => {
       
       connectionHandler(mockWs);
 
-      // Simulate closing
+      
       const closeCall = mockWs.on.mock.calls.find(call => call[0] === 'close');
       closeCall[1]();
 
@@ -328,7 +328,7 @@ describe('wsServer', () => {
       
       connectionHandler(mockWs);
 
-      // Simulate receiving a message
+      
       const messageCall = mockWs.on.mock.calls.find(call => call[0] === 'message');
       const testData = Buffer.from('test message');
       messageCall[1](testData);
@@ -361,7 +361,7 @@ describe('wsServer', () => {
     it('should handle WebSocket with pre-existing isAlive property', () => {
       const mockWs = { 
         on: vi.fn(), 
-        isAlive: false // Pre-existing value
+        isAlive: false 
       };
       
       createWsServer({ port: 8080, logger: mockLogger });
@@ -371,7 +371,7 @@ describe('wsServer', () => {
       
       connectionHandler(mockWs);
 
-      // Should overwrite pre-existing value
+      
       expect(mockWs.isAlive).toBe(true);
     });
 

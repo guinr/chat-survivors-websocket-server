@@ -1,6 +1,9 @@
 import { config } from '../core/config.js';
 
 export function setupHeartbeat(wss, logger) {
+  if (wss._heartbeatInitialized) return;
+  wss._heartbeatInitialized = true;
+
   const timer = setInterval(() => {
     wss.clients.forEach((ws) => {
       if (!ws.isAlive) {

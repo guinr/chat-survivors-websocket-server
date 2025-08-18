@@ -102,8 +102,8 @@ describe('authMiddleware', () => {
     it('should return false when token is expired', () => {
       const expiredTokenPayload = { 
         sub: 'user123', 
-        iat: Math.floor(Date.now() / 1000) - 7200, // 2 hours ago
-        exp: Math.floor(Date.now() / 1000) - 3600  // expired 1 hour ago
+        iat: Math.floor(Date.now() / 1000) - 7200, 
+        exp: Math.floor(Date.now() / 1000) - 3600  
       };
       const expiredToken = jwt.sign(expiredTokenPayload, config.twitchClientSecret);
       

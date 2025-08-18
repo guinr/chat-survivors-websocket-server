@@ -25,7 +25,7 @@ describe('MessageBus', () => {
 
   beforeEach(() => {
     mockWs1 = {
-      readyState: 1, // WebSocket.OPEN
+      readyState: 1, 
       send: vi.fn()
     };
 
@@ -35,7 +35,7 @@ describe('MessageBus', () => {
     };
 
     mockWs3 = {
-      readyState: 3, // WebSocket.CLOSED
+      readyState: 3, 
       send: vi.fn()
     };
 
@@ -65,7 +65,7 @@ describe('MessageBus', () => {
         data: null
       };
 
-      messageBus.send(mockWs3, message); // readyState = 3 (CLOSED)
+      messageBus.send(mockWs3, message); 
 
       expect(mockWs3.send).not.toHaveBeenCalled();
     });
@@ -77,12 +77,12 @@ describe('MessageBus', () => {
         data: null
       };
 
-      // Test different WebSocket states
+      
       const states = [
-        { readyState: 0, shouldSend: false }, // CONNECTING
-        { readyState: 1, shouldSend: true },  // OPEN
-        { readyState: 2, shouldSend: false }, // CLOSING
-        { readyState: 3, shouldSend: false }  // CLOSED
+        { readyState: 0, shouldSend: false }, 
+        { readyState: 1, shouldSend: true },  
+        { readyState: 2, shouldSend: false }, 
+        { readyState: 3, shouldSend: false }  
       ];
 
       states.forEach(({ readyState, shouldSend }) => {
@@ -145,12 +145,12 @@ describe('MessageBus', () => {
 
       messageBus.sendToGame('user1', 'TestUser', 'join');
 
-      // Should not call send on any socket
+      
       expect(mockWs1.send).not.toHaveBeenCalled();
     });
 
     it('should not send message when game socket is closed', () => {
-      connectionManager.gameSocket = mockWs3; // readyState = 3 (CLOSED)
+      connectionManager.gameSocket = mockWs3; 
 
       messageBus.sendToGame('user1', 'TestUser', 'join');
 
@@ -200,7 +200,7 @@ describe('MessageBus', () => {
     });
 
     it('should not send message when user extension is closed', () => {
-      connectionManager.getExtension.mockReturnValue(mockWs3); // readyState = 3 (CLOSED)
+      connectionManager.getExtension.mockReturnValue(mockWs3); 
 
       messageBus.sendToUser('user1', 'TestUser', 'notification');
 
@@ -213,7 +213,7 @@ describe('MessageBus', () => {
     it('should broadcast message to all extensions', () => {
       const mockBroadcastFn = vi.fn();
       connectionManager.broadcastToExtensions.mockImplementation((fn) => {
-        // Simulate calling the function for each extension
+        
         fn(mockWs1);
         fn(mockWs2);
       });
@@ -266,21 +266,21 @@ describe('MessageBus', () => {
 
     it('should skip closed connections during broadcast', () => {
       connectionManager.broadcastToExtensions.mockImplementation((fn) => {
-        fn(mockWs1); // OPEN
-        fn(mockWs3); // CLOSED
-        fn(mockWs2); // OPEN
+        fn(mockWs1); 
+        fn(mockWs3); 
+        fn(mockWs2); 
       });
 
       messageBus.broadcastToExtensions('user1', 'TestUser', 'global_event');
 
       expect(mockWs1.send).toHaveBeenCalled();
       expect(mockWs2.send).toHaveBeenCalled();
-      expect(mockWs3.send).not.toHaveBeenCalled(); // Closed connection should be skipped
+      expect(mockWs3.send).not.toHaveBeenCalled(); 
     });
 
     it('should handle empty extensions list', () => {
       connectionManager.broadcastToExtensions.mockImplementation((fn) => {
-        // Does not call the function for any extension (empty list)
+        
       });
 
       expect(() => {
@@ -293,8 +293,8 @@ describe('MessageBus', () => {
 
   describe('message schema validation', () => {
     it('should handle schema validation', () => {
-      // The current test uses a simple zod mock that just returns the data
-      // In a more robust test, you could test real validation scenarios
+      
+      
       const message = {
         user: { id: 'user1', display_name: 'TestUser' },
         action: 'test',
