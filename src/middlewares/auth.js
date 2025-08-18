@@ -4,7 +4,8 @@ import { config } from '../core/config.js';
 export function authMiddleware(message) {
   const { role, token, userId } = message;
   
-  if (role !== 'extension') return true;
+  const allowedRolesWithoutAuth = ['game', 'viewer'];
+  if (allowedRolesWithoutAuth.includes(role)) return true;
 
   if (!token || !userId) return false;
 

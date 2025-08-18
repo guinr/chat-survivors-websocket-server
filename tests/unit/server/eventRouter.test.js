@@ -120,6 +120,33 @@ describe('eventRouter', () => {
 
       expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
     });
+
+    it('should handle message with empty string userId in auth failure', () => {
+      authMiddleware.mockReturnValue(false);
+      const message = { action: 'join', userId: '' };
+
+      routeMessage(mockWs, JSON.stringify(message), mockLogger);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
+    });
+
+    it('should handle message with null userId in auth failure', () => {
+      authMiddleware.mockReturnValue(false);
+      const message = { action: 'join', userId: null };
+
+      routeMessage(mockWs, JSON.stringify(message), mockLogger);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
+    });
+
+    it('should handle message with zero userId in auth failure', () => {
+      authMiddleware.mockReturnValue(false);
+      const message = { action: 'join', userId: 0 };
+
+      routeMessage(mockWs, JSON.stringify(message), mockLogger);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
+    });
   });
 
   describe('rate limit middleware', () => {
@@ -153,6 +180,39 @@ describe('eventRouter', () => {
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
       expect(rateLimitMiddleware).toHaveBeenCalledWith(undefined);
+    });
+
+    it('should handle message with empty string userId in rate limit failure', () => {
+      rateLimitMiddleware.mockReturnValue(false);
+      const message = { action: 'join', userId: '' };
+
+      routeMessage(mockWs, JSON.stringify(message), mockLogger);
+
+      expect(rateLimitMiddleware).toHaveBeenCalledWith('');
+      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido excedeu rate limit');
+      expect(handleJoin).not.toHaveBeenCalled();
+    });
+
+    it('should handle message with null userId in rate limit failure', () => {
+      rateLimitMiddleware.mockReturnValue(false);
+      const message = { action: 'join', userId: null };
+
+      routeMessage(mockWs, JSON.stringify(message), mockLogger);
+
+      expect(rateLimitMiddleware).toHaveBeenCalledWith(null);
+      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido excedeu rate limit');
+      expect(handleJoin).not.toHaveBeenCalled();
+    });
+
+    it('should handle message with zero userId in rate limit failure', () => {
+      rateLimitMiddleware.mockReturnValue(false);
+      const message = { action: 'join', userId: 0 };
+
+      routeMessage(mockWs, JSON.stringify(message), mockLogger);
+
+      expect(rateLimitMiddleware).toHaveBeenCalledWith(0);
+      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido excedeu rate limit');
+      expect(handleJoin).not.toHaveBeenCalled();
     });
   });
 
