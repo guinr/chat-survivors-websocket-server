@@ -26,127 +26,139 @@ describe('rateLimitMiddleware', () => {
 
   it('should allow messages when userId is undefined', () => {
     const result = rateLimitMiddleware(undefined);
-    expect(result).toBe(true);
+    expect(result).toBe(false);
   });
 
   it('should allow messages when userId is null', () => {
     const result = rateLimitMiddleware(null);
-    expect(result).toBe(true);
+    expect(result).toBe(false);
   });
 
   it('should allow the first message from a user', () => {
-    const userId = 'user123';
-    const result = rateLimitMiddleware(userId);
+    const data = { userId: 'user123' };
+    const result = rateLimitMiddleware(data);
     expect(result).toBe(true);
   });
 
   it('should allow messages within the per-second limit', () => {
-    const userId = 'user123';
+    const data = { userId: 'user123' };
 
-    expect(rateLimitMiddleware(userId)).toBe(true);
-    expect(rateLimitMiddleware(userId)).toBe(true);
-    expect(rateLimitMiddleware(userId)).toBe(true);
-    expect(rateLimitMiddleware(userId)).toBe(true);
-    expect(rateLimitMiddleware(userId)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
   });
 
   it('should block messages that exceed the per-second limit', () => {
-    const userId = 'user123';
+    const data = { userId: 'user123' };
 
     
     for (let i = 0; i < 5; i++) {
-      expect(rateLimitMiddleware(userId)).toBe(true);
+      expect(rateLimitMiddleware(data)).toBe(true);
     }
 
     
-    expect(rateLimitMiddleware(userId)).toBe(false);
+    expect(rateLimitMiddleware(data)).toBe(false);
 
     
-    expect(rateLimitMiddleware(userId)).toBe(false);
+    expect(rateLimitMiddleware(data)).toBe(false);
   });
 
   it('should reset the counter after 1 second', () => {
-    const userId = 'user123';
+    const data = { userId: 'user123' };
 
     
     for (let i = 0; i < 5; i++) {
-      expect(rateLimitMiddleware(userId)).toBe(true);
+      expect(rateLimitMiddleware(data)).toBe(true);
     }
 
     
-    expect(rateLimitMiddleware(userId)).toBe(false);
+    expect(rateLimitMiddleware(data)).toBe(false);
 
     
     vi.advanceTimersByTime(1000);
 
     
-    expect(rateLimitMiddleware(userId)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
   });
 
   it('should track different users independently', () => {
-    const user1 = 'user1';
-    const user2 = 'user2';
+    const user1Data = { userId: 'user1' };
+    const user2Data = { userId: 'user2' };
 
     
     for (let i = 0; i < 5; i++) {
-      expect(rateLimitMiddleware(user1)).toBe(true);
+      expect(rateLimitMiddleware(user1Data)).toBe(true);
     }
 
     
-    expect(rateLimitMiddleware(user1)).toBe(false);
+    expect(rateLimitMiddleware(user1Data)).toBe(false);
 
     
-    expect(rateLimitMiddleware(user2)).toBe(true);
-    expect(rateLimitMiddleware(user2)).toBe(true);
+    expect(rateLimitMiddleware(user2Data)).toBe(true);
+    expect(rateLimitMiddleware(user2Data)).toBe(true);
   });
 
   it('should allow messages after resetting the time window', () => {
-    const userId = 'user123';
+    const data = { userId: 'user123' };
 
     
-    expect(rateLimitMiddleware(userId)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
 
     
     vi.advanceTimersByTime(500);
 
     
     for (let i = 0; i < 4; i++) {
-      expect(rateLimitMiddleware(userId)).toBe(true);
+      expect(rateLimitMiddleware(data)).toBe(true);
     }
 
     
-    expect(rateLimitMiddleware(userId)).toBe(false);
+    expect(rateLimitMiddleware(data)).toBe(false);
 
     
     vi.advanceTimersByTime(600);
 
     
-    expect(rateLimitMiddleware(userId)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
   });
 
   it('should correctly update the counter within the same time window', () => {
-    const userId = 'user123';
+    const data = { userId: 'user123' };
 
     
     const baseTime = 1000000;
     vi.setSystemTime(baseTime);
 
     
-    expect(rateLimitMiddleware(userId)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
 
     
     vi.setSystemTime(baseTime + 100);
-    expect(rateLimitMiddleware(userId)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
 
     
     vi.setSystemTime(baseTime + 300);
-    expect(rateLimitMiddleware(userId)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
 
     
-    expect(rateLimitMiddleware(userId)).toBe(true);
-    expect(rateLimitMiddleware(userId)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
+    expect(rateLimitMiddleware(data)).toBe(true);
 
     
-    expect(rateLimitMiddleware(userId)).toBe(false);
+    expect(rateLimitMiddleware(data)).toBe(false);
+  });
+
+  it('should handle object format with userId', () => {
+    const data = { userId: 'user456' };
+    const result = rateLimitMiddleware(data);
+    expect(result).toBe(true);
+  });
+
+  it('should handle object format with game role', () => {
+    const data = { userId: 'user456', role: 'game' };
+    const result = rateLimitMiddleware(data);
+    expect(result).toBe(true);
   });
 });

@@ -2,8 +2,8 @@ import { config } from '../core/config.js';
 
 const userMessageCounts = new Map();
 
-export function rateLimitMiddleware(userId) {
-  if (!userId) return true;
+function checkRateLimit(userId) {
+  if (!userId) return false;
 
   const now = Date.now();
   const windowTime = 1000;
@@ -28,4 +28,11 @@ export function rateLimitMiddleware(userId) {
   }
 
   return true;
+}
+
+export function rateLimitMiddleware(data) {
+  const { userId, role } = data || {};
+  if (role === 'game') return true;
+  
+  return checkRateLimit(userId);
 }
