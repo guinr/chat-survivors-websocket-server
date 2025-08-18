@@ -91,13 +91,13 @@ describe('ConnectionManager', () => {
     });
 
     it('should prioritize game socket removal over extension', () => {
-      // Add the same socket as game and extension
+      
       connectionManager.addGame(mockWs1);
       connectionManager.addExtension('user1', mockWs1);
       
       connectionManager.remove(mockWs1);
 
-      // Should remove only the game socket, extension remains
+      
       expect(connectionManager.gameSocket).toBeNull();
       expect(connectionManager.getExtension('user1')).toBe(mockWs1);
     });

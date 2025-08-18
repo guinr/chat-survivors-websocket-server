@@ -195,12 +195,12 @@ describe('eventRouter', () => {
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      // Verify middleware sequence
+      
       expect(authMiddleware).toHaveBeenCalledWith(message);
       expect(rateLimitMiddleware).toHaveBeenCalledWith('user123');
       expect(handleJoin).toHaveBeenCalledWith(mockWs, message, mockLogger);
 
-      // Should not have error or warning logs
+      
       expect(mockLogger.error).not.toHaveBeenCalled();
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
@@ -231,39 +231,36 @@ describe('eventRouter', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle null data causing auth failure', () => {
-      // JSON.parse(null) returns null, but message.userId causes error
-      // This reveals a bug in the code - should use optional chaining or check
-      expect(() => {
-        routeMessage(mockWs, null, mockLogger);
-      }).toThrow();
+    it('should handle null data with type validation', () => {
+      routeMessage(mockWs, null, mockLogger);
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { data: null, type: 'object' },
+        'Tipo de dados inválido'
+      );
+      expect(authMiddleware).not.toHaveBeenCalled();
     });
 
-    it('should handle undefined data', () => {
+    it('should handle undefined data with type validation', () => {
       routeMessage(mockWs, undefined, mockLogger);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          err: expect.any(Error),
-          data: undefined
-        }),
-        'Mensagem inválida'
+        { data: undefined, type: 'undefined' },
+        'Tipo de dados inválido'
       );
+      expect(authMiddleware).not.toHaveBeenCalled();
     });
 
-    it('should handle object passed as data instead of string', () => {
+    it('should handle object passed as data with type validation', () => {
       const message = { action: 'join', userId: 'user123' };
 
-      // Passing object directly instead of JSON string
       routeMessage(mockWs, message, mockLogger);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          err: expect.any(Error),
-          data: message
-        }),
-        'Mensagem inválida'
+        { data: message, type: 'object' },
+        'Tipo de dados inválido'
       );
+      expect(authMiddleware).not.toHaveBeenCalled();
     });
 
     it('should handle message with null action', () => {
@@ -277,45 +274,47 @@ describe('eventRouter', () => {
       );
     });
 
-    it('should handle string "null" as data causing auth failure', () => {
-      // JSON.parse('null') returns null, but message.userId causes error
-      // This reveals a bug in the code - should use optional chaining or check
-      expect(() => {
-        routeMessage(mockWs, 'null', mockLogger);
-      }).toThrow();
+    it('should handle string null as data with structure validation', () => {
+      routeMessage(mockWs, 'null', mockLogger);
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { message: null, type: 'object' },
+        'Estrutura de mensagem inválida'
+      );
+      expect(authMiddleware).not.toHaveBeenCalled();
     });
 
-    it('should handle number as data', () => {
-      // JSON.parse(123) returns 123, but 123.userId will be undefined
-      authMiddleware.mockReturnValue(false);
-      
+    it('should handle number as data with type validation', () => {
       routeMessage(mockWs, 123, mockLogger);
 
-      expect(authMiddleware).toHaveBeenCalledWith(123);
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { data: 123, type: 'number' },
+        'Tipo de dados inválido'
+      );
+      expect(authMiddleware).not.toHaveBeenCalled();
     });
 
-    it('should handle boolean as data', () => {
-      // JSON.parse(true) returns true, but true.userId will be undefined
-      authMiddleware.mockReturnValue(false);
-      
+    it('should handle boolean as data with type validation', () => {
       routeMessage(mockWs, true, mockLogger);
 
-      expect(authMiddleware).toHaveBeenCalledWith(true);
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { data: true, type: 'boolean' },
+        'Tipo de dados inválido'
+      );
+      expect(authMiddleware).not.toHaveBeenCalled();
     });
 
-    it('should handle array as string data', () => {
+    it('should handle array as string data with structure validation', () => {
       const message = { action: 'join', userId: 'user123' };
       const arrayData = JSON.stringify([message]);
 
-      // When the JSON is an array, authMiddleware receives the array
-      authMiddleware.mockReturnValue(false);
-      
       routeMessage(mockWs, arrayData, mockLogger);
 
-      expect(authMiddleware).toHaveBeenCalledWith([message]);
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { message: [message], type: 'object' },
+        'Estrutura de mensagem inválida'
+      );
+      expect(authMiddleware).not.toHaveBeenCalled();
     });
   });
 });
