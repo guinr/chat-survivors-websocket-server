@@ -156,7 +156,7 @@ describe('eventRouter', () => {
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(rateLimitMiddleware).toHaveBeenCalledWith('user123');
+      expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
       expect(handleJoin).toHaveBeenCalled();
       expect(mockLogger.warn).not.toHaveBeenCalledWith(
         expect.stringContaining('excedeu rate limit')
@@ -169,7 +169,7 @@ describe('eventRouter', () => {
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(rateLimitMiddleware).toHaveBeenCalledWith('user123');
+      expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
       expect(mockLogger.warn).toHaveBeenCalledWith('Usuário user123 excedeu rate limit');
       expect(handleJoin).not.toHaveBeenCalled();
     });
@@ -179,7 +179,7 @@ describe('eventRouter', () => {
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(rateLimitMiddleware).toHaveBeenCalledWith(undefined);
+      expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
     });
 
     it('should handle message with empty string userId in rate limit failure', () => {
@@ -188,7 +188,7 @@ describe('eventRouter', () => {
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(rateLimitMiddleware).toHaveBeenCalledWith('');
+      expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
       expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido excedeu rate limit');
       expect(handleJoin).not.toHaveBeenCalled();
     });
@@ -199,7 +199,7 @@ describe('eventRouter', () => {
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(rateLimitMiddleware).toHaveBeenCalledWith(null);
+      expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
       expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido excedeu rate limit');
       expect(handleJoin).not.toHaveBeenCalled();
     });
@@ -210,7 +210,7 @@ describe('eventRouter', () => {
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(rateLimitMiddleware).toHaveBeenCalledWith(0);
+      expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
       expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido excedeu rate limit');
       expect(handleJoin).not.toHaveBeenCalled();
     });
@@ -257,7 +257,7 @@ describe('eventRouter', () => {
 
       
       expect(authMiddleware).toHaveBeenCalledWith(message);
-      expect(rateLimitMiddleware).toHaveBeenCalledWith('user123');
+      expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
       expect(handleJoin).toHaveBeenCalledWith(mockWs, message, mockLogger);
 
       

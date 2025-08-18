@@ -27,7 +27,7 @@ export function routeMessage(ws, data, logger) {
     return;
   }
 
-  if (!rateLimitMiddleware(message?.userId)) {
+  if (!rateLimitMiddleware(message)) {
     logger.warn(`Usuário ${message?.userId || 'desconhecido'} excedeu rate limit`);
     return;
   }
