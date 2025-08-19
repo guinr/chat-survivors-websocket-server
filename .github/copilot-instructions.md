@@ -24,6 +24,7 @@ Este projeto é um servidor WebSocket para um chat de sobreviventes em tempo rea
 - Prefira `const` e `let` ao invés de `var`
 - Não adicione comentários no código - o código deve ser auto-explicativo
 - Mantenha funções pequenas e com responsabilidade única
+- Não usar classes do ES6
 
 ## Ferramentas e Frameworks
 

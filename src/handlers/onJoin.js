@@ -1,5 +1,6 @@
 import { connectionManager } from '../server/connectionManager.js';
 import { messageBus } from '../server/messageBus.js';
+import { userCache } from '../core/userCache.js';
 import fetch from 'node-fetch';
 import { config } from '../core/config.js';
 
@@ -40,9 +41,19 @@ async function fetchTwitchUserInfo(userId, accessToken) {
 }
 
 async function getUserDisplayName(userId, logger) {
+  const cachedDisplayName = userCache.get(userId);
+  
+  if (cachedDisplayName) {
+    logger.debug({ userId, displayName: cachedDisplayName }, 'Display name encontrado no cache');
+    return cachedDisplayName;
+  }
+
   try {
     const accessToken = await getTwitchAccessToken();
     const displayName = await fetchTwitchUserInfo(userId, accessToken);
+    
+    userCache.set(userId, displayName);
+    logger.debug({ userId, displayName }, 'Display name salvo no cache');
     
     return displayName;
   } catch (error) {
