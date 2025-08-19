@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { messageBus } from '../../../src/server/messageBus.js';
 import { connectionManager } from '../../../src/server/connectionManager.js';
+import { userCache } from '../../../src/core/userCache.js';
 
 vi.mock('zod', () => ({
   z: {
@@ -17,6 +18,16 @@ vi.mock('../../../src/server/connectionManager.js', () => ({
     gameSocket: null,
     getExtension: vi.fn(),
     broadcastToExtensions: vi.fn()
+  }
+}));
+
+vi.mock('../../../src/core/userCache.js', () => ({
+  userCache: {
+    get: vi.fn(),
+    set: vi.fn(),
+    has: vi.fn(),
+    clear: vi.fn(),
+    size: vi.fn()
   }
 }));
 
@@ -43,6 +54,7 @@ describe('MessageBus', () => {
     connectionManager.gameSocket = null;
     connectionManager.getExtension.mockReturnValue(null);
     connectionManager.broadcastToExtensions.mockImplementation(() => {});
+    userCache.get.mockReturnValue(null);
   });
 
   describe('send', () => {
@@ -156,6 +168,54 @@ describe('MessageBus', () => {
 
       expect(mockWs3.send).not.toHaveBeenCalled();
     });
+
+    it('should use cached display name when none provided', () => {
+      connectionManager.gameSocket = mockWs1;
+      userCache.get.mockReturnValue('CachedUser');
+
+      messageBus.sendToGame('user1', null, 'join');
+
+      expect(userCache.get).toHaveBeenCalledWith('user1');
+      expect(mockWs1.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          user: { id: 'user1', display_name: 'CachedUser' },
+          action: 'join',
+          data: null
+        })
+      );
+    });
+
+    it('should use default display name when none provided and not cached', () => {
+      connectionManager.gameSocket = mockWs1;
+      userCache.get.mockReturnValue(null);
+
+      messageBus.sendToGame('user1', null, 'join');
+
+      expect(userCache.get).toHaveBeenCalledWith('user1');
+      expect(mockWs1.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          user: { id: 'user1', display_name: 'Desconhecido' },
+          action: 'join',
+          data: null
+        })
+      );
+    });
+
+    it('should prefer provided display name over cache', () => {
+      connectionManager.gameSocket = mockWs1;
+      userCache.get.mockReturnValue('CachedUser');
+
+      messageBus.sendToGame('user1', 'ProvidedUser', 'join');
+
+      expect(userCache.get).not.toHaveBeenCalled();
+      expect(mockWs1.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          user: { id: 'user1', display_name: 'ProvidedUser' },
+          action: 'join',
+          data: null
+        })
+      );
+    });
   });
 
   describe('sendToUser', () => {
@@ -206,6 +266,54 @@ describe('MessageBus', () => {
 
       expect(connectionManager.getExtension).toHaveBeenCalledWith('user1');
       expect(mockWs3.send).not.toHaveBeenCalled();
+    });
+
+    it('should use cached display name when none provided', () => {
+      connectionManager.getExtension.mockReturnValue(mockWs1);
+      userCache.get.mockReturnValue('CachedUser');
+
+      messageBus.sendToUser('user1', null, 'notification');
+
+      expect(userCache.get).toHaveBeenCalledWith('user1');
+      expect(mockWs1.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          user: { id: 'user1', display_name: 'CachedUser' },
+          action: 'notification',
+          data: null
+        })
+      );
+    });
+
+    it('should use default display name when none provided and not cached', () => {
+      connectionManager.getExtension.mockReturnValue(mockWs1);
+      userCache.get.mockReturnValue(null);
+
+      messageBus.sendToUser('user1', null, 'notification');
+
+      expect(userCache.get).toHaveBeenCalledWith('user1');
+      expect(mockWs1.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          user: { id: 'user1', display_name: 'Desconhecido' },
+          action: 'notification',
+          data: null
+        })
+      );
+    });
+
+    it('should prefer provided display name over cache', () => {
+      connectionManager.getExtension.mockReturnValue(mockWs1);
+      userCache.get.mockReturnValue('CachedUser');
+
+      messageBus.sendToUser('user1', 'ProvidedUser', 'notification');
+
+      expect(userCache.get).not.toHaveBeenCalled();
+      expect(mockWs1.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          user: { id: 'user1', display_name: 'ProvidedUser' },
+          action: 'notification',
+          data: null
+        })
+      );
     });
   });
 
@@ -288,6 +396,68 @@ describe('MessageBus', () => {
       }).not.toThrow();
 
       expect(connectionManager.broadcastToExtensions).toHaveBeenCalledWith(expect.any(Function));
+    });
+
+    it('should use cached display name when none provided', () => {
+      userCache.get.mockReturnValue('CachedUser');
+      connectionManager.broadcastToExtensions.mockImplementation((fn) => {
+        fn(mockWs1);
+        fn(mockWs2);
+      });
+
+      messageBus.broadcastToExtensions('user1', null, 'global_event');
+
+      expect(userCache.get).toHaveBeenCalledWith('user1');
+      expect(mockWs1.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          user: { id: 'user1', display_name: 'CachedUser' },
+          action: 'global_event',
+          data: null
+        })
+      );
+      expect(mockWs2.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          user: { id: 'user1', display_name: 'CachedUser' },
+          action: 'global_event',
+          data: null
+        })
+      );
+    });
+
+    it('should use default display name when none provided and not cached', () => {
+      userCache.get.mockReturnValue(null);
+      connectionManager.broadcastToExtensions.mockImplementation((fn) => {
+        fn(mockWs1);
+      });
+
+      messageBus.broadcastToExtensions('user1', null, 'global_event');
+
+      expect(userCache.get).toHaveBeenCalledWith('user1');
+      expect(mockWs1.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          user: { id: 'user1', display_name: 'Desconhecido' },
+          action: 'global_event',
+          data: null
+        })
+      );
+    });
+
+    it('should prefer provided display name over cache', () => {
+      userCache.get.mockReturnValue('CachedUser');
+      connectionManager.broadcastToExtensions.mockImplementation((fn) => {
+        fn(mockWs1);
+      });
+
+      messageBus.broadcastToExtensions('user1', 'ProvidedUser', 'global_event');
+
+      expect(userCache.get).not.toHaveBeenCalled();
+      expect(mockWs1.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          user: { id: 'user1', display_name: 'ProvidedUser' },
+          action: 'global_event',
+          data: null
+        })
+      );
     });
   });
 

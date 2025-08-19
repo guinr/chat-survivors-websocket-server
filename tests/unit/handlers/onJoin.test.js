@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handleJoin } from '../../../src/handlers/onJoin.js';
 import { connectionManager } from '../../../src/server/connectionManager.js';
 import { messageBus } from '../../../src/server/messageBus.js';
+import { userCache } from '../../../src/core/userCache.js';
 import fetch from 'node-fetch';
 
 vi.mock('../../../src/server/connectionManager.js');
 vi.mock('../../../src/server/messageBus.js');
+vi.mock('../../../src/core/userCache.js');
 vi.mock('node-fetch');
 
 describe('handleJoin', () => {
@@ -16,13 +18,34 @@ describe('handleJoin', () => {
     mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
-      error: vi.fn()
+      error: vi.fn(),
+      debug: vi.fn()
     };
     vi.clearAllMocks();
   });
 
-  it('should handle valid join message with successful API calls', async () => {
+  it('should use cached display name when available', async () => {
     const message = { userId: 'test123' };
+    
+    userCache.get.mockReturnValue('CachedUser');
+
+    await handleJoin(mockWs, message, mockLogger);
+
+    expect(userCache.get).toHaveBeenCalledWith('test123');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
+    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (CachedUser) entrou');
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      { userId: 'test123', displayName: 'CachedUser' },
+      'Display name encontrado no cache'
+    );
+    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'CachedUser', 'join');
+  });
+
+  it('should fetch and cache display name when not in cache', async () => {
+    const message = { userId: 'test123' };
+
+    userCache.get.mockReturnValue(null);
 
     fetch.mockResolvedValueOnce({
       ok: true,
@@ -32,17 +55,40 @@ describe('handleJoin', () => {
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ 
-        data: [{ display_name: 'TestUser' }] 
+        data: [{ display_name: 'FetchedUser' }] 
       })
     });
 
     await handleJoin(mockWs, message, mockLogger);
 
+    expect(userCache.get).toHaveBeenCalledWith('test123');
+    expect(userCache.set).toHaveBeenCalledWith('test123', 'FetchedUser');
     expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
-    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (TestUser) entrou');
-    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'TestUser', 'join');
-    expect(mockLogger.warn).not.toHaveBeenCalled();
-    expect(mockLogger.error).not.toHaveBeenCalled();
+    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (FetchedUser) entrou');
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      { userId: 'test123', displayName: 'FetchedUser' },
+      'Display name salvo no cache'
+    );
+    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'FetchedUser', 'join');
+  });
+
+  it('should handle cache miss and API failure gracefully', async () => {
+    const message = { userId: 'test123' };
+
+    userCache.get.mockReturnValue(null);
+    fetch.mockRejectedValueOnce(new Error('Network error'));
+
+    await handleJoin(mockWs, message, mockLogger);
+
+    expect(userCache.get).toHaveBeenCalledWith('test123');
+    expect(userCache.set).not.toHaveBeenCalled();
+    expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      { error: 'Network error', userId: 'test123' },
+      'Falha ao buscar display_name'
+    );
+    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (Desconhecido) entrou');
+    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'Desconhecido', 'join');
   });
 
   it('should warn on invalid message without userId', async () => {
@@ -51,12 +97,15 @@ describe('handleJoin', () => {
     await handleJoin(mockWs, message, mockLogger);
 
     expect(mockLogger.warn).toHaveBeenCalledWith('Join recebido sem userId');
+    expect(userCache.get).not.toHaveBeenCalled();
     expect(connectionManager.addExtension).not.toHaveBeenCalled();
     expect(messageBus.sendToGame).not.toHaveBeenCalled();
   });
 
   it('should handle failed access token request', async () => {
     const message = { userId: 'test123' };
+
+    userCache.get.mockReturnValue(null);
 
     fetch.mockResolvedValueOnce({
       ok: false,
@@ -75,132 +124,10 @@ describe('handleJoin', () => {
     expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'Desconhecido', 'join');
   });
 
-  it('should handle failed access token request without message', async () => {
-    const message = { userId: 'test456' };
-
-    
-    fetch.mockResolvedValueOnce({
-      ok: false,
-      statusText: 'Bad Request',
-      json: async () => ({}) 
-    });
-
-    await handleJoin(mockWs, message, mockLogger);
-
-    expect(connectionManager.addExtension).toHaveBeenCalledWith('test456', mockWs);
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      { error: 'Failed to get access token: Bad Request', userId: 'test456' },
-      'Falha ao buscar display_name'
-    );
-    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test456 (Desconhecido) entrou');
-    expect(messageBus.sendToGame).toHaveBeenCalledWith('test456', 'Desconhecido', 'join');
-  });
-
-  it('should handle failed user info request', async () => {
-    const message = { userId: 'test123' };
-
-    
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ access_token: 'mock_token' })
-    });
-
-    
-    fetch.mockResolvedValueOnce({
-      ok: false,
-      statusText: 'Not Found',
-      json: async () => ({ message: 'User not found' })
-    });
-
-    await handleJoin(mockWs, message, mockLogger);
-
-    expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      { error: 'Failed to fetch user info: User not found', userId: 'test123' },
-      'Falha ao buscar display_name'
-    );
-    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (Desconhecido) entrou');
-    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'Desconhecido', 'join');
-  });
-
-  it('should handle failed user info request without message', async () => {
-    const message = { userId: 'test789' };
-
-    
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ access_token: 'mock_token' })
-    });
-
-    
-    fetch.mockResolvedValueOnce({
-      ok: false,
-      statusText: 'Forbidden',
-      json: async () => ({}) 
-    });
-
-    await handleJoin(mockWs, message, mockLogger);
-
-    expect(connectionManager.addExtension).toHaveBeenCalledWith('test789', mockWs);
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      { error: 'Failed to fetch user info: Forbidden', userId: 'test789' },
-      'Falha ao buscar display_name'
-    );
-    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test789 (Desconhecido) entrou');
-    expect(messageBus.sendToGame).toHaveBeenCalledWith('test789', 'Desconhecido', 'join');
-  });
-
-  it('should handle user info with no display_name', async () => {
-    const message = { userId: 'test123' };
-
-    
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ access_token: 'mock_token' })
-    });
-
-    
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ 
-        data: [{}] 
-      })
-    });
-
-    await handleJoin(mockWs, message, mockLogger);
-
-    expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
-    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (Desconhecido) entrou');
-    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'Desconhecido', 'join');
-  });
-
-  it('should handle user info with empty data array', async () => {
-    const message = { userId: 'test123' };
-
-    
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ access_token: 'mock_token' })
-    });
-
-    
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ 
-        data: [] 
-      })
-    });
-
-    await handleJoin(mockWs, message, mockLogger);
-
-    expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
-    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (Desconhecido) entrou');
-    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'Desconhecido', 'join');
-  });
-
   it('should handle network errors', async () => {
     const message = { userId: 'test123' };
 
+    userCache.get.mockReturnValue(null);
     
     fetch.mockRejectedValueOnce(new Error('Network error'));
 
@@ -209,6 +136,80 @@ describe('handleJoin', () => {
     expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
     expect(mockLogger.error).toHaveBeenCalledWith(
       { error: 'Network error', userId: 'test123' },
+      'Falha ao buscar display_name'
+    );
+    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (Desconhecido) entrou');
+    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'Desconhecido', 'join');
+  });
+
+  it('should handle failed user info request without message property', async () => {
+    const message = { userId: 'test123' };
+
+    userCache.get.mockReturnValue(null);
+    
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: 'mock_token' })
+    });
+
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      statusText: 'Not Found',
+      json: async () => ({})
+    });
+
+    await handleJoin(mockWs, message, mockLogger);
+
+    expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      { error: 'Failed to fetch user info: Not Found', userId: 'test123' },
+      'Falha ao buscar display_name'
+    );
+    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (Desconhecido) entrou');
+    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'Desconhecido', 'join');
+  });
+
+  it('should handle user data without display_name property', async () => {
+    const message = { userId: 'test123' };
+
+    userCache.get.mockReturnValue(null);
+    
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: 'mock_token' })
+    });
+
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ 
+        data: [{ id: 'test123' }] // Sem display_name
+      })
+    });
+
+    await handleJoin(mockWs, message, mockLogger);
+
+    expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
+    expect(userCache.set).toHaveBeenCalledWith('test123', 'Desconhecido');
+    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (Desconhecido) entrou');
+    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'Desconhecido', 'join');
+  });
+
+  it('should handle failed access token request using statusText when no message', async () => {
+    const message = { userId: 'test123' };
+
+    userCache.get.mockReturnValue(null);
+
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      statusText: 'Bad Request',
+      json: async () => ({}) // Sem message
+    });
+
+    await handleJoin(mockWs, message, mockLogger);
+
+    expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      { error: 'Failed to get access token: Bad Request', userId: 'test123' },
       'Falha ao buscar display_name'
     );
     expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (Desconhecido) entrou');
