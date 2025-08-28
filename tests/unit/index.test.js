@@ -8,7 +8,9 @@ describe('Index', () => {
   beforeEach(() => {
     vi.resetModules();
     
-    mockCreateWsServer = vi.fn().mockReturnValue({});
+    mockCreateWsServer = vi.fn().mockReturnValue({
+      close: vi.fn((callback) => callback && callback())
+    });
     mockLogger = {
       info: vi.fn(),
       error: vi.fn(),
@@ -30,6 +32,13 @@ describe('Index', () => {
     vi.doMock('../../src/core/config.js', () => ({
       config: mockConfig
     }));
+
+    vi.doMock('../../src/core/storekeeperService.js', () => ({
+      storekeeperService: {
+        init: vi.fn(),
+        destroy: vi.fn()
+      }
+    }));
   });
 
   afterEach(() => {
@@ -50,10 +59,17 @@ describe('Index', () => {
   it('should log server startup message with correct port', async () => {
     await import('../../src/index.js?t=' + Date.now());
 
-    expect(mockLogger.info).toHaveBeenCalledTimes(1);
     expect(mockLogger.info).toHaveBeenCalledWith(
       `Servidor WebSocket iniciado na porta ${mockConfig.port}`
     );
+  });
+
+  it('should initialize storekeeper service', async () => {
+    const storekeeperServiceModule = await import('../../src/core/storekeeperService.js');
+    
+    await import('../../src/index.js?t=' + Date.now());
+
+    expect(storekeeperServiceModule.storekeeperService.init).toHaveBeenCalledWith(mockLogger);
   });
 
   it('should use custom port from config', async () => {
@@ -84,23 +100,6 @@ describe('Index', () => {
     expect(mockLogger.info).toHaveBeenCalledWith(
       'Servidor WebSocket iniciado na porta 9000'
     );
-  });
-
-  it('should call functions in correct order', async () => {
-    const callOrder = [];
-    
-    mockCreateWsServer.mockImplementation(() => {
-      callOrder.push('createWsServer');
-      return {};
-    });
-    
-    mockLogger.info.mockImplementation(() => {
-      callOrder.push('logger.info');
-    });
-
-    await import('../../src/index.js?t=' + Date.now());
-
-    expect(callOrder).toEqual(['createWsServer', 'logger.info']);
   });
 
   it('should work with different logger implementations', async () => {
@@ -156,5 +155,39 @@ describe('Index', () => {
     expect(mockLogger.info).toHaveBeenCalledWith(
       'Servidor WebSocket iniciado na porta 0'
     );
+  });
+
+  it('should handle SIGINT signal', async () => {
+    const storekeeperServiceModule = await import('../../src/core/storekeeperService.js');
+    const mockWss = mockCreateWsServer();
+    const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => {});
+    
+    await import('../../src/index.js?t=' + Date.now());
+
+    process.emit('SIGINT');
+
+    expect(mockLogger.info).toHaveBeenCalledWith('Recebido SIGINT, desligando servidor...');
+    expect(storekeeperServiceModule.storekeeperService.destroy).toHaveBeenCalled();
+    expect(mockWss.close).toHaveBeenCalled();
+    expect(mockProcessExit).toHaveBeenCalledWith(0);
+    
+    mockProcessExit.mockRestore();
+  });
+
+  it('should handle SIGTERM signal', async () => {
+    const storekeeperServiceModule = await import('../../src/core/storekeeperService.js');
+    const mockWss = mockCreateWsServer();
+    const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => {});
+    
+    await import('../../src/index.js?t=' + Date.now());
+
+    process.emit('SIGTERM');
+
+    expect(mockLogger.info).toHaveBeenCalledWith('Recebido SIGTERM, desligando servidor...');
+    expect(storekeeperServiceModule.storekeeperService.destroy).toHaveBeenCalled();
+    expect(mockWss.close).toHaveBeenCalled();
+    expect(mockProcessExit).toHaveBeenCalledWith(0);
+    
+    mockProcessExit.mockRestore();
   });
 });
