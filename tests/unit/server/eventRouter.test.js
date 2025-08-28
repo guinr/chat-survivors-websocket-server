@@ -13,12 +13,24 @@ vi.mock('../../../src/handlers/onJoin.js', () => ({
   handleJoin: vi.fn()
 }));
 
+vi.mock('../../../src/handlers/onStorekeeper.js', () => ({
+  handleStorekeeper: vi.fn()
+}));
+
+vi.mock('../../../src/core/storekeeperService.js', () => ({
+  storekeeperService: {
+    handleGameResponse: vi.fn()
+  }
+}));
+
 describe('eventRouter', () => {
   let mockWs;
   let mockLogger;
   let rateLimitMiddleware;
   let authMiddleware;
   let handleJoin;
+  let handleStorekeeper;
+  let storekeeperService;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -26,10 +38,14 @@ describe('eventRouter', () => {
     const rateLimitModule = await import('../../../src/middlewares/rateLimit.js');
     const authModule = await import('../../../src/middlewares/auth.js');
     const joinModule = await import('../../../src/handlers/onJoin.js');
+    const storekeeperModule = await import('../../../src/handlers/onStorekeeper.js');
+    const storekeeperServiceModule = await import('../../../src/core/storekeeperService.js');
 
     rateLimitMiddleware = rateLimitModule.rateLimitMiddleware;
     authMiddleware = authModule.authMiddleware;
     handleJoin = joinModule.handleJoin;
+    handleStorekeeper = storekeeperModule.handleStorekeeper;
+    storekeeperService = storekeeperServiceModule.storekeeperService;
 
     authMiddleware.mockReturnValue(true);
     rateLimitMiddleware.mockReturnValue(true);
@@ -225,6 +241,28 @@ describe('eventRouter', () => {
       expect(handleJoin).toHaveBeenCalledWith(mockWs, message, mockLogger);
     });
 
+    it('should route storekeeper action to handleStorekeeper', () => {
+      const message = { action: 'storekeeper', userId: 'user123' };
+
+      routeMessage(mockWs, JSON.stringify(message), mockLogger);
+
+      expect(handleStorekeeper).toHaveBeenCalledWith(mockWs, message, mockLogger);
+    });
+
+    it('should handle storekeeper game response', () => {
+      const gameResponse = {
+        name: 'Seksal',
+        phrases: ['test phrase'],
+        common_items: []
+      };
+
+      routeMessage(mockWs, JSON.stringify(gameResponse), mockLogger);
+
+      expect(storekeeperService.handleGameResponse).toHaveBeenCalledWith(gameResponse);
+      expect(authMiddleware).not.toHaveBeenCalled();
+      expect(rateLimitMiddleware).not.toHaveBeenCalled();
+    });
+
     it('should handle unknown action', () => {
       const message = { action: 'unknown', userId: 'user123' };
 
@@ -235,6 +273,7 @@ describe('eventRouter', () => {
         'Tipo de mensagem desconhecido'
       );
       expect(handleJoin).not.toHaveBeenCalled();
+      expect(handleStorekeeper).not.toHaveBeenCalled();
     });
 
     it('should handle message without action', () => {
@@ -259,6 +298,21 @@ describe('eventRouter', () => {
       expect(authMiddleware).toHaveBeenCalledWith(message);
       expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
       expect(handleJoin).toHaveBeenCalledWith(mockWs, message, mockLogger);
+
+      
+      expect(mockLogger.error).not.toHaveBeenCalled();
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('should complete full flow for valid storekeeper message', () => {
+      const message = { action: 'storekeeper', userId: 'user123' };
+
+      routeMessage(mockWs, JSON.stringify(message), mockLogger);
+
+      
+      expect(authMiddleware).toHaveBeenCalledWith(message);
+      expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
+      expect(handleStorekeeper).toHaveBeenCalledWith(mockWs, message, mockLogger);
 
       
       expect(mockLogger.error).not.toHaveBeenCalled();

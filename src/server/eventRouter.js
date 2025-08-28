@@ -1,6 +1,8 @@
 import { rateLimitMiddleware } from '../middlewares/rateLimit.js';
 import { handleJoin } from '../handlers/onJoin.js';
+import { handleStorekeeper } from '../handlers/onStorekeeper.js';
 import { authMiddleware } from '../middlewares/auth.js';
+import { storekeeperService } from '../core/storekeeperService.js';
 
 export function routeMessage(ws, data, logger) {
   if (typeof data !== 'string') {
@@ -22,6 +24,12 @@ export function routeMessage(ws, data, logger) {
     return;
   }
 
+  if (message.name && message.phrases && message.common_items) {
+    logger.info('Recebida resposta do storekeeper do jogo');
+    storekeeperService.handleGameResponse(message);
+    return;
+  }
+
   if (!authMiddleware(message)) {
     logger.warn(`Usuário ${message?.userId || 'desconhecido'} não autorizado`);
     return;
@@ -37,6 +45,9 @@ export function routeMessage(ws, data, logger) {
   switch (action) {
     case 'join':
       handleJoin(ws, message, logger);
+      break;
+    case 'storekeeper':
+      handleStorekeeper(ws, message, logger);
       break;
     default:
       logger.warn({ action }, 'Tipo de mensagem desconhecido');
