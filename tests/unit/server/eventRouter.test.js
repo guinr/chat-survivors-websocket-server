@@ -17,6 +17,10 @@ vi.mock('../../../src/handlers/onStorekeeper.js', () => ({
   handleStorekeeper: vi.fn()
 }));
 
+vi.mock('../../../src/handlers/onExtension.js', () => ({
+  handleExtension: vi.fn()
+}));
+
 vi.mock('../../../src/core/storekeeperService.js', () => ({
   storekeeperService: {
     handleGameResponse: vi.fn()
@@ -30,6 +34,7 @@ describe('eventRouter', () => {
   let authMiddleware;
   let handleJoin;
   let handleStorekeeper;
+  let handleExtension;
   let storekeeperService;
 
   beforeEach(async () => {
@@ -39,12 +44,14 @@ describe('eventRouter', () => {
     const authModule = await import('../../../src/middlewares/auth.js');
     const joinModule = await import('../../../src/handlers/onJoin.js');
     const storekeeperModule = await import('../../../src/handlers/onStorekeeper.js');
+    const extensionModule = await import('../../../src/handlers/onExtension.js');
     const storekeeperServiceModule = await import('../../../src/core/storekeeperService.js');
 
     rateLimitMiddleware = rateLimitModule.rateLimitMiddleware;
     authMiddleware = authModule.authMiddleware;
     handleJoin = joinModule.handleJoin;
     handleStorekeeper = storekeeperModule.handleStorekeeper;
+    handleExtension = extensionModule.handleExtension;
     storekeeperService = storekeeperServiceModule.storekeeperService;
 
     authMiddleware.mockReturnValue(true);
@@ -249,6 +256,18 @@ describe('eventRouter', () => {
       expect(handleStorekeeper).toHaveBeenCalledWith(mockWs, message, mockLogger);
     });
 
+    it('should route extension actions to handleExtension', () => {
+      const extensionActions = ['str', 'agi', 'vit', 'luc', 'equip', 'buy', 'sell'];
+      
+      extensionActions.forEach(action => {
+        const message = { action, userId: 'user123', value: 10 };
+
+        routeMessage(mockWs, JSON.stringify(message), mockLogger);
+
+        expect(handleExtension).toHaveBeenCalledWith(mockWs, message, mockLogger);
+      });
+    });
+
     it('should handle storekeeper game response', () => {
       const gameResponse = {
         name: 'Seksal',
@@ -274,6 +293,7 @@ describe('eventRouter', () => {
       );
       expect(handleJoin).not.toHaveBeenCalled();
       expect(handleStorekeeper).not.toHaveBeenCalled();
+      expect(handleExtension).not.toHaveBeenCalled();
     });
 
     it('should handle message without action', () => {

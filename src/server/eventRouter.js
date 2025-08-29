@@ -1,6 +1,7 @@
 import { rateLimitMiddleware } from '../middlewares/rateLimit.js';
 import { handleJoin } from '../handlers/onJoin.js';
 import { handleStorekeeper } from '../handlers/onStorekeeper.js';
+import { handleExtension } from '../handlers/onExtension.js';
 import { authMiddleware } from '../middlewares/auth.js';
 import { storekeeperService } from '../core/storekeeperService.js';
 
@@ -48,6 +49,15 @@ export function routeMessage(ws, data, logger) {
       break;
     case 'storekeeper':
       handleStorekeeper(ws, message, logger);
+      break;
+    case 'str':
+    case 'agi':
+    case 'vit':
+    case 'luc':
+    case 'equip':
+    case 'buy':
+    case 'sell':
+      handleExtension(ws, message, logger);
       break;
     default:
       logger.warn({ action }, 'Tipo de mensagem desconhecido');

@@ -62,6 +62,8 @@ async function getUserDisplayName(userId, logger) {
   }
 }
 
+export { getUserDisplayName };
+
 function validateJoinMessage(message) {
   const { userId } = message;
   
