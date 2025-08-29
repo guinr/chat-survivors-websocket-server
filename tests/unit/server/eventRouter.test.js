@@ -27,6 +27,12 @@ vi.mock('../../../src/core/storekeeperService.js', () => ({
   }
 }));
 
+vi.mock('../../../src/server/messageBus.js', () => ({
+  messageBus: {
+    sendToUser: vi.fn()
+  }
+}));
+
 describe('eventRouter', () => {
   let mockWs;
   let mockLogger;
@@ -36,6 +42,7 @@ describe('eventRouter', () => {
   let handleStorekeeper;
   let handleExtension;
   let storekeeperService;
+  let messageBus;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -46,6 +53,7 @@ describe('eventRouter', () => {
     const storekeeperModule = await import('../../../src/handlers/onStorekeeper.js');
     const extensionModule = await import('../../../src/handlers/onExtension.js');
     const storekeeperServiceModule = await import('../../../src/core/storekeeperService.js');
+    const messageBusModule = await import('../../../src/server/messageBus.js');
 
     rateLimitMiddleware = rateLimitModule.rateLimitMiddleware;
     authMiddleware = authModule.authMiddleware;
@@ -53,6 +61,7 @@ describe('eventRouter', () => {
     handleStorekeeper = storekeeperModule.handleStorekeeper;
     handleExtension = extensionModule.handleExtension;
     storekeeperService = storekeeperServiceModule.storekeeperService;
+    messageBus = messageBusModule.messageBus;
 
     authMiddleware.mockReturnValue(true);
     rateLimitMiddleware.mockReturnValue(true);
@@ -280,6 +289,87 @@ describe('eventRouter', () => {
       expect(storekeeperService.handleGameResponse).toHaveBeenCalledWith(gameResponse);
       expect(authMiddleware).not.toHaveBeenCalled();
       expect(rateLimitMiddleware).not.toHaveBeenCalled();
+    });
+
+    it('should route game response to extension user', () => {
+      const gameResponse = {
+        user: { id: 'user123', display_name: 'TestUser' },
+        action: 'level_up',
+        data: { level: 15, exp: 2500 }
+      };
+
+      routeMessage(mockWs, JSON.stringify(gameResponse), mockLogger);
+
+      expect(messageBus.sendToUser).toHaveBeenCalledWith('user123', 'TestUser', 'level_up', { level: 15, exp: 2500 });
+      expect(authMiddleware).not.toHaveBeenCalled();
+      expect(rateLimitMiddleware).not.toHaveBeenCalled();
+    });
+
+    it('should handle all game response actions', () => {
+      const gameActions = [
+        'joined', 'cant_join', 'died', 'experience_up', 'level_up', 
+        'health_changed', 'status_increased', 'inventory', 'used', 
+        'equipped', 'buyed', 'sold'
+      ];
+
+      gameActions.forEach(action => {
+        const gameResponse = {
+          user: { id: 'user456', display_name: 'GameUser' },
+          action,
+          data: { test: 'data' }
+        };
+
+        routeMessage(mockWs, JSON.stringify(gameResponse), mockLogger);
+
+        expect(messageBus.sendToUser).toHaveBeenCalledWith('user456', 'GameUser', action, { test: 'data' });
+      });
+    });
+
+    it('should handle game response without data', () => {
+      const gameResponse = {
+        user: { id: 'user789', display_name: 'SimpleUser' },
+        action: 'died'
+      };
+
+      routeMessage(mockWs, JSON.stringify(gameResponse), mockLogger);
+
+      expect(messageBus.sendToUser).toHaveBeenCalledWith('user789', 'SimpleUser', 'died', undefined);
+    });
+
+    it('should handle game response without display_name', () => {
+      const gameResponse = {
+        user: { id: 'user999' },
+        action: 'health_changed',
+        data: { health: 80 }
+      };
+
+      routeMessage(mockWs, JSON.stringify(gameResponse), mockLogger);
+
+      expect(messageBus.sendToUser).toHaveBeenCalledWith('user999', undefined, 'health_changed', { health: 80 });
+    });
+
+    it('should not route when user.id is missing', () => {
+      const gameResponse = {
+        user: { display_name: 'NoIdUser' },
+        action: 'level_up'
+      };
+
+      routeMessage(mockWs, JSON.stringify(gameResponse), mockLogger);
+
+      expect(messageBus.sendToUser).not.toHaveBeenCalled();
+      expect(authMiddleware).toHaveBeenCalled();
+    });
+
+    it('should not route when action is missing', () => {
+      const gameResponse = {
+        user: { id: 'user123', display_name: 'TestUser' },
+        data: { some: 'data' }
+      };
+
+      routeMessage(mockWs, JSON.stringify(gameResponse), mockLogger);
+
+      expect(messageBus.sendToUser).not.toHaveBeenCalled();
+      expect(authMiddleware).toHaveBeenCalled();
     });
 
     it('should handle unknown action', () => {

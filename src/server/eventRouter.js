@@ -4,6 +4,7 @@ import { handleStorekeeper } from '../handlers/onStorekeeper.js';
 import { handleExtension } from '../handlers/onExtension.js';
 import { authMiddleware } from '../middlewares/auth.js';
 import { storekeeperService } from '../core/storekeeperService.js';
+import { messageBus } from './messageBus.js';
 
 export function routeMessage(ws, data, logger) {
   if (typeof data !== 'string') {
@@ -28,6 +29,11 @@ export function routeMessage(ws, data, logger) {
   if (message.name && message.phrases && message.common_items) {
     logger.info('Recebida resposta do storekeeper do jogo');
     storekeeperService.handleGameResponse(message);
+    return;
+  }
+
+  if (message.user?.id && message.action) {
+    messageBus.sendToUser(message.user.id, message.user.display_name, message.action, message.data);
     return;
   }
 
