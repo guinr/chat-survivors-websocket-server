@@ -1,112 +1,61 @@
-# chat-survivors-websocket-server
+# Chat Survivors WebSocket Server
 
-Servidor WebSocket para chat de sobreviventes em tempo real, integrando extensões Twitch e jogo. Permite comunicação bidirecional entre clientes (extensões, jogo) e servidor, com autenticação JWT, rate limiting, cache de nomes de usuário e logging estruturado.
+Servidor WebSocket em tempo real para comunicação entre extensões Twitch e o jogo Chat Survivors.
 
-## Funcionalidades
+## ✨ O que faz
 
-- Comunicação WebSocket entre extensões Twitch, jogo e servidor
-- Autenticação JWT para roles sensíveis (admin, extension)
-- Rate limiting por usuário para evitar abuso/DDoS
-- Cache de display_name de usuários Twitch
-- Heartbeat para detecção e encerramento de conexões mortas
-- Logging estruturado com pino/pino-pretty
-- Testes unitários com 100% de cobertura usando Vitest
+- 🚀 **Comunicação instantânea** entre extensões Twitch e jogo
+- 🔐 **Autenticação segura** via JWT para extensões
+- ⚡ **Rate limiting** para proteção contra abuso
+- 📊 **Logging estruturado** para monitoramento
+- 🧪 **100% testado** com cobertura completa
 
-## Estrutura de Pastas
+## 🛠️ Stack
 
-```
-src/
-  core/
-    config.js         # Configurações do servidor e credenciais Twitch
-    logger.js         # Logger estruturado
-    userCache.js      # Cache de display_name dos usuários
-  handlers/
-    onJoin.js         # Manipulador do evento 'join'
-  middlewares/
-    auth.js           # Middleware de autenticação JWT
-    rateLimit.js      # Middleware de rate limiting por usuário
-  server/
-    connectionManager.js # Gerencia conexões (game, extensões)
-    eventRouter.js       # Roteia mensagens recebidas
-    heartbeat.js         # Heartbeat para conexões vivas
-    messageBus.js        # Envio/broadcast de mensagens
-    wsServer.js          # Inicialização do WebSocketServer
-index.js             # Entry point do servidor
-tests/unit/          # Testes unitários espelhando src/
-```
+- **Node.js** 18+ • **WebSocket** • **JWT** • **Vitest**
 
-## Requisitos
+## ⚡ Quick Start
 
-- Node.js >= 18
-- Twitch Client ID e Secret configurados em variáveis de ambiente
+**Pré-requisitos:** Node.js 18+ e credenciais Twitch
 
-## Instalação
-
-```sh
+```bash
+# Setup
+git clone https://github.com/guinr/chat-survivors-websocket-server.git
+cd chat-survivors-websocket-server
 yarn install
-```
 
-## Configuração
-
-Crie um arquivo `.env` com as variáveis:
-
-```
+# Configurar .env
+cat > .env << EOF
 PORT=8080
 TWITCH_CLIENT_ID=seu_client_id
 TWITCH_CLIENT_SECRET=seu_client_secret
 LOG_LEVEL=info
+EOF
+
+# Executar
+yarn start              # Produção
+yarn dev               # Desenvolvimento
+yarn test              # Testes
 ```
 
-## Uso
+## 📡 Conexão
 
-### Iniciar servidor
+**WebSocket:** `ws://localhost:8080`
 
-```sh
-yarn start
-```
+**Autenticação:**
+- `viewer` / `game` → Acesso público
+- `extension` → Token JWT obrigatório
 
-### Desenvolvimento com hot reload
+## 📋 Qualidade
 
-```sh
-yarn dev
-```
+**Segurança:** Rate limiting • JWT validation • DDoS protection • Security logging  
+**Testes:** 100% coverage • Automated testing • Unit tests  
+**Código:** ESM modules • Structured logging • Comprehensive documentation
 
-### Testes
+## 📝 Licença
 
-```sh
-yarn test
-```
-
-### Cobertura de testes
-
-```sh
-yarn test:coverage
-```
-
-## Endpoints WebSocket
-
-- Extensões e jogo conectam via WebSocket na porta configurada (`ws://localhost:PORT`)
-- Mensagens aceitas:
-  - `join`: Usuário entra no chat (requer `userId`)
-- Autenticação:
-  - Roles `game` e `viewer` não exigem token
-  - Roles `admin`, `moderator`, `extension` exigem JWT válido (verificado via `auth.js`)
-
-## Segurança
-
-- Rate limiting por usuário (configurável)
-- Autenticação JWT para roles sensíveis
-- Validação de entrada e logging de erros
-
-## Testes
-
-- Cobertura 100% garantida por Vitest
-- Testes unitários para todos módulos em `tests/unit/`
-
-## Licença
-
-MIT
+MIT - veja [LICENSE](LICENSE) para detalhes.
 
 ---
 
-Desenvolvido por Digi.
+**Desenvolvido por [Digi](https://github.com/guinr)**
