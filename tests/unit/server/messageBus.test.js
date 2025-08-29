@@ -353,19 +353,19 @@ describe('MessageBus', () => {
         fn(mockWs2);
       });
 
-      messageBus.broadcastToExtensions('admin', 'AdminUser', 'server_announcement', eventData);
+      messageBus.broadcastToExtensions('user123', 'TestUser', 'server_announcement', eventData);
 
       expect(connectionManager.broadcastToExtensions).toHaveBeenCalledWith(expect.any(Function));
       expect(mockWs1.send).toHaveBeenCalledWith(
         JSON.stringify({
-          user: { id: 'admin', display_name: 'AdminUser' },
+          user: { id: 'user123', display_name: 'TestUser' },
           action: 'server_announcement',
           data: eventData
         })
       );
       expect(mockWs2.send).toHaveBeenCalledWith(
         JSON.stringify({
-          user: { id: 'admin', display_name: 'AdminUser' },
+          user: { id: 'user123', display_name: 'TestUser' },
           action: 'server_announcement',
           data: eventData
         })

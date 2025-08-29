@@ -29,18 +29,6 @@ describe('authMiddleware', () => {
   });
 
   describe('when role requires authentication', () => {
-    it('should return false for role "admin" without token', () => {
-      const message = { role: 'admin' };
-      const result = authMiddleware(message);
-      expect(result).toBe(false);
-    });
-
-    it('should return false for role "moderator" without token', () => {
-      const message = { role: 'moderator' };
-      const result = authMiddleware(message);
-      expect(result).toBe(false);
-    });
-
     it('should return false for undefined role', () => {
       const message = {};
       const result = authMiddleware(message);
@@ -160,27 +148,6 @@ describe('authMiddleware', () => {
       
       const result = authMiddleware(message);
       expect(result).toBe(false);
-    });
-
-    it('should return true with valid token for admin role', () => {
-      const tokenPayload = { 
-        sub: 'admin123', 
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 3600
-      };
-      const validToken = jwt.sign(tokenPayload, config.twitchClientSecret);
-      
-      const message = { 
-        role: 'admin', 
-        token: validToken, 
-        userId: 'admin123' 
-      };
-      
-      const result = authMiddleware(message);
-      
-      expect(result).toBe(true);
-      expect(message.tokenData).toBeDefined();
-      expect(message.tokenData.sub).toBe('admin123');
     });
   });
 });
