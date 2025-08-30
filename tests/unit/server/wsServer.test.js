@@ -66,6 +66,14 @@ describe('wsServer', () => {
       expect(WebSocketServer).toHaveBeenCalledWith({ port });
     });
 
+    it('should create WebSocketServer with HTTP server when provided', () => {
+      const mockServer = { listen: vi.fn() };
+
+      createWsServer({ server: mockServer, logger: mockLogger });
+
+      expect(WebSocketServer).toHaveBeenCalledWith({ server: mockServer });
+    });
+
     it('should setup heartbeat', () => {
       createWsServer({ port: 8080, logger: mockLogger });
 

@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: chat-survivors-websocket-server
+    runtime: node
+    plan: starter
+    buildCommand: yarn install
+    startCommand: yarn start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: TWITCH_CLIENT_ID
+        sync: false  # Will prompt for value during creation
+      - key: TWITCH_CLIENT_SECRET
+        sync: false  # Will prompt for value during creation

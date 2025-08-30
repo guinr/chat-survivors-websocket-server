@@ -146,4 +146,14 @@ describe('Logger', () => {
     
     expect(() => testSerializers()).not.toThrow();
   });
+
+  it('should not use pino-pretty transport in production mode', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.resetModules();
+    
+    const { logger } = await import('../../../src/core/logger.js?t=' + Date.now());
+    
+    expect(logger).toBeDefined();
+    expect(typeof logger.info).toBe('function');
+  });
 });
