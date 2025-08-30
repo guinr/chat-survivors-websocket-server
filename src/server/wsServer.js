@@ -3,8 +3,9 @@ import { setupHeartbeat } from './heartbeat.js';
 import { connectionManager } from './connectionManager.js';
 import { routeMessage } from './eventRouter.js';
 
-export function createWsServer({ port, logger }) {
-  const wss = new WebSocketServer({ port });
+export function createWsServer({ server, port, logger }) {
+  const wsOptions = server ? { server } : { port };
+  const wss = new WebSocketServer(wsOptions);
 
   wss.on('connection', (ws) => {
     ws.isAlive = true;

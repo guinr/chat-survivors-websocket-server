@@ -44,5 +44,23 @@ export const connectionManager = {
     for (const ws of this.extensions.values()) {
       fn(ws);
     }
+  },
+
+  getActiveConnections() {
+    const connections = [];
+    
+    if (this.gameSocket) {
+      connections.push({ type: 'game', status: 'connected' });
+    }
+    
+    for (const [userId, ws] of this.extensions.entries()) {
+      connections.push({ 
+        type: 'extension', 
+        userId, 
+        status: ws.readyState === 1 ? 'connected' : 'disconnected' 
+      });
+    }
+    
+    return connections;
   }
 };

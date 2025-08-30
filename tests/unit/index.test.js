@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('Index', () => {
   let mockCreateWsServer;
+  let mockCreateHealthServer;
+  let mockHttpServer;
   let mockLogger;
   let mockConfig;
 
@@ -11,6 +13,16 @@ describe('Index', () => {
     mockCreateWsServer = vi.fn().mockReturnValue({
       close: vi.fn((callback) => callback && callback())
     });
+    
+    mockHttpServer = {
+      listen: vi.fn((port, host, callback) => {
+        if (typeof callback === 'function') callback();
+      }),
+      close: vi.fn((callback) => callback && callback())
+    };
+    
+    mockCreateHealthServer = vi.fn().mockReturnValue(mockHttpServer);
+    
     mockLogger = {
       info: vi.fn(),
       error: vi.fn(),
@@ -23,6 +35,10 @@ describe('Index', () => {
 
     vi.doMock('../../src/server/wsServer.js', () => ({
       createWsServer: mockCreateWsServer
+    }));
+    
+    vi.doMock('../../src/server/healthServer.js', () => ({
+      createHealthServer: mockCreateHealthServer
     }));
     
     vi.doMock('../../src/core/logger.js', () => ({
@@ -46,21 +62,39 @@ describe('Index', () => {
     vi.unstubAllEnvs();
   });
 
-  it('should create WebSocket server with correct parameters', async () => {
+  it('should create health server and WebSocket server with correct parameters', async () => {
     await import('../../src/index.js?t=' + Date.now());
+
+    expect(mockCreateHealthServer).toHaveBeenCalledTimes(1);
+    expect(mockCreateHealthServer).toHaveBeenCalledWith({
+      port: mockConfig.port,
+      logger: mockLogger
+    });
 
     expect(mockCreateWsServer).toHaveBeenCalledTimes(1);
     expect(mockCreateWsServer).toHaveBeenCalledWith({
-      port: mockConfig.port,
+      server: mockHttpServer,
       logger: mockLogger
     });
   });
 
-  it('should log server startup message with correct port', async () => {
+  it('should start HTTP server and log startup messages', async () => {
     await import('../../src/index.js?t=' + Date.now());
 
+    expect(mockHttpServer.listen).toHaveBeenCalledWith(
+      mockConfig.port,
+      '0.0.0.0',
+      expect.any(Function)
+    );
+
     expect(mockLogger.info).toHaveBeenCalledWith(
-      `Servidor WebSocket iniciado na porta ${mockConfig.port}`
+      `Servidor iniciado na porta ${mockConfig.port}`
+    );
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      `Health check: http://localhost:${mockConfig.port}/health`
+    );
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      `WebSocket: ws://localhost:${mockConfig.port}`
     );
   });
 
@@ -77,13 +111,20 @@ describe('Index', () => {
 
     await import('../../src/index.js?t=' + Date.now());
 
-    expect(mockCreateWsServer).toHaveBeenCalledWith({
+    expect(mockCreateHealthServer).toHaveBeenCalledWith({
       port: 3000,
       logger: mockLogger
     });
 
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      'Servidor WebSocket iniciado na porta 3000'
+    expect(mockCreateWsServer).toHaveBeenCalledWith({
+      server: mockHttpServer,
+      logger: mockLogger
+    });
+
+    expect(mockHttpServer.listen).toHaveBeenCalledWith(
+      3000,
+      '0.0.0.0',
+      expect.any(Function)
     );
   });
 
@@ -92,14 +133,15 @@ describe('Index', () => {
 
     await import('../../src/index.js?t=' + Date.now());
 
-    expect(mockCreateWsServer).toHaveBeenCalledWith({
+    expect(mockCreateHealthServer).toHaveBeenCalledWith({
       port: '9000',
       logger: mockLogger
     });
 
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      'Servidor WebSocket iniciado na porta 9000'
-    );
+    expect(mockCreateWsServer).toHaveBeenCalledWith({
+      server: mockHttpServer,
+      logger: mockLogger
+    });
   });
 
   it('should work with different logger implementations', async () => {
@@ -117,14 +159,15 @@ describe('Index', () => {
 
     await import('../../src/index.js?t=' + Date.now());
 
-    expect(mockCreateWsServer).toHaveBeenCalledWith({
+    expect(mockCreateHealthServer).toHaveBeenCalledWith({
       port: mockConfig.port,
       logger: customLogger
     });
 
-    expect(customLogger.info).toHaveBeenCalledWith(
-      `Servidor WebSocket iniciado na porta ${mockConfig.port}`
-    );
+    expect(mockCreateWsServer).toHaveBeenCalledWith({
+      server: mockHttpServer,
+      logger: customLogger
+    });
   });
 
   it('should handle edge case with undefined port', async () => {
@@ -132,14 +175,10 @@ describe('Index', () => {
 
     await import('../../src/index.js?t=' + Date.now());
 
-    expect(mockCreateWsServer).toHaveBeenCalledWith({
+    expect(mockCreateHealthServer).toHaveBeenCalledWith({
       port: undefined,
       logger: mockLogger
     });
-
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      'Servidor WebSocket iniciado na porta undefined'
-    );
   });
 
   it('should handle zero port', async () => {
@@ -147,21 +186,21 @@ describe('Index', () => {
 
     await import('../../src/index.js?t=' + Date.now());
 
-    expect(mockCreateWsServer).toHaveBeenCalledWith({
+    expect(mockCreateHealthServer).toHaveBeenCalledWith({
       port: 0,
       logger: mockLogger
     });
-
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      'Servidor WebSocket iniciado na porta 0'
-    );
   });
 
   it('should handle SIGINT signal', async () => {
+    const mockWss = {
+      close: vi.fn((callback) => callback && callback())
+    };
+    mockCreateWsServer.mockReturnValue(mockWss);
+
     const storekeeperServiceModule = await import('../../src/core/storekeeperService.js');
-    const mockWss = mockCreateWsServer();
     const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => {});
-    
+
     await import('../../src/index.js?t=' + Date.now());
 
     process.emit('SIGINT');
@@ -175,10 +214,14 @@ describe('Index', () => {
   });
 
   it('should handle SIGTERM signal', async () => {
+    const mockWss = {
+      close: vi.fn((callback) => callback && callback())
+    };
+    mockCreateWsServer.mockReturnValue(mockWss);
+
     const storekeeperServiceModule = await import('../../src/core/storekeeperService.js');
-    const mockWss = mockCreateWsServer();
     const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => {});
-    
+
     await import('../../src/index.js?t=' + Date.now());
 
     process.emit('SIGTERM');

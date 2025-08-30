@@ -170,4 +170,68 @@ describe('ConnectionManager', () => {
       expect(mockWs2.terminate).not.toHaveBeenCalled();
     });
   });
+
+  describe('getActiveConnections', () => {
+    it('should return empty array when no connections', () => {
+      const connections = connectionManager.getActiveConnections();
+      expect(connections).toEqual([]);
+    });
+
+    it('should return game connection when game socket exists', () => {
+      connectionManager.addGame(mockWs1);
+      
+      const connections = connectionManager.getActiveConnections();
+      expect(connections).toEqual([
+        { type: 'game', status: 'connected' }
+      ]);
+    });
+
+    it('should return extension connections', () => {
+      connectionManager.addExtension('user1', mockWs1);
+      connectionManager.addExtension('user2', mockWs2);
+      
+      const connections = connectionManager.getActiveConnections();
+      expect(connections).toEqual([
+        { type: 'extension', userId: 'user1', status: 'connected' },
+        { type: 'extension', userId: 'user2', status: 'connected' }
+      ]);
+    });
+
+    it('should return both game and extension connections', () => {
+      connectionManager.addGame(mockWs1);
+      connectionManager.addExtension('user1', mockWs2);
+      
+      const connections = connectionManager.getActiveConnections();
+      expect(connections).toEqual([
+        { type: 'game', status: 'connected' },
+        { type: 'extension', userId: 'user1', status: 'connected' }
+      ]);
+    });
+
+    it('should mark extension as disconnected when readyState is not 1', () => {
+      mockWs1.readyState = 0; // CONNECTING
+      connectionManager.addExtension('user1', mockWs1);
+      
+      const connections = connectionManager.getActiveConnections();
+      expect(connections).toEqual([
+        { type: 'extension', userId: 'user1', status: 'disconnected' }
+      ]);
+    });
+
+    it('should handle different readyState values', () => {
+      const mockWs3 = { terminate: vi.fn(), readyState: 2 }; // CLOSING
+      const mockWs4 = { terminate: vi.fn(), readyState: 3 }; // CLOSED
+      
+      connectionManager.addExtension('user1', mockWs1); // readyState: 1 (OPEN)
+      connectionManager.addExtension('user2', mockWs3); // readyState: 2 (CLOSING)
+      connectionManager.addExtension('user3', mockWs4); // readyState: 3 (CLOSED)
+      
+      const connections = connectionManager.getActiveConnections();
+      expect(connections).toEqual([
+        { type: 'extension', userId: 'user1', status: 'connected' },
+        { type: 'extension', userId: 'user2', status: 'disconnected' },
+        { type: 'extension', userId: 'user3', status: 'disconnected' }
+      ]);
+    });
+  });
 });
