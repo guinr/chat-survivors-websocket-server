@@ -7,22 +7,39 @@ import { storekeeperService } from '../core/storekeeperService.js';
 import { messageBus } from './messageBus.js';
 
 export function routeMessage(ws, data, logger) {
-  if (typeof data !== 'string') {
-    logger.error({ data, type: typeof data }, 'Tipo de dados inválido');
+  let stringData;
+  if (Buffer.isBuffer(data)) {
+    stringData = data.toString('utf8');
+  } else if (typeof data === 'string') {
+    stringData = data;
+  } else {
+    logger.error({ 
+      type: typeof data, 
+      length: data?.length || 'unknown',
+      isBuffer: Buffer.isBuffer(data)
+    }, 'Dados recebidos não são string nem Buffer');
     return;
   }
 
   let message;
 
   try {
-    message = JSON.parse(data);
+    message = JSON.parse(stringData);
   } catch (err) {
-    logger.error({ err, data }, 'Mensagem inválida');
+    logger.error({ 
+      error: err.message,
+      dataLength: stringData.length,
+      dataPreview: stringData.substring(0, 100) + (stringData.length > 100 ? '...' : '')
+    }, 'Falha ao parsear JSON');
     return;
   }
 
   if (message === null || typeof message !== 'object' || Array.isArray(message)) {
-    logger.error({ message, type: typeof message }, 'Estrutura de mensagem inválida');
+    logger.error({ 
+      messageType: typeof message,
+      isArray: Array.isArray(message),
+      isNull: message === null
+    }, 'Estrutura de mensagem inválida');
     return;
   }
 

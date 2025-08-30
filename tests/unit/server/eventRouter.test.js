@@ -90,6 +90,32 @@ describe('eventRouter', () => {
       expect(authMiddleware).toHaveBeenCalledWith(message);
     });
 
+    it('should handle Buffer data by converting to string', () => {
+      const message = { action: 'join', userId: 'user123' };
+      const bufferData = Buffer.from(JSON.stringify(message), 'utf8');
+
+      routeMessage(mockWs, bufferData, mockLogger);
+
+      expect(mockLogger.error).not.toHaveBeenCalled();
+      expect(authMiddleware).toHaveBeenCalledWith(message);
+    });
+
+    it('should handle invalid JSON with long data and truncate preview', () => {
+      const longInvalidData = '{ invalid json: ' + 'a'.repeat(200) + ' }';
+
+      routeMessage(mockWs, longInvalidData, mockLogger);
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.any(String),
+          dataLength: longInvalidData.length,
+          dataPreview: expect.stringMatching(/\.\.\.$/),
+        }),
+        'Falha ao parsear JSON'
+      );
+      expect(authMiddleware).not.toHaveBeenCalled();
+    });
+
     it('should handle invalid JSON and log error', () => {
       const invalidData = '{ invalid json';
 
@@ -97,10 +123,11 @@ describe('eventRouter', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
-          err: expect.any(Error),
-          data: invalidData
+          error: expect.any(String),
+          dataLength: 14,
+          dataPreview: invalidData
         }),
-        'Mensagem inválida'
+        'Falha ao parsear JSON'
       );
       expect(authMiddleware).not.toHaveBeenCalled();
     });
@@ -110,10 +137,11 @@ describe('eventRouter', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
-          err: expect.any(Error),
-          data: ''
+          error: expect.any(String),
+          dataLength: 0,
+          dataPreview: ''
         }),
-        'Mensagem inválida'
+        'Falha ao parsear JSON'
       );
     });
   });
@@ -459,8 +487,12 @@ describe('eventRouter', () => {
       routeMessage(mockWs, null, mockLogger);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        { data: null, type: 'object' },
-        'Tipo de dados inválido'
+        expect.objectContaining({
+          type: 'object',
+          isBuffer: false,
+          length: 'unknown'
+        }),
+        'Dados recebidos não são string nem Buffer'
       );
       expect(authMiddleware).not.toHaveBeenCalled();
     });
@@ -469,8 +501,12 @@ describe('eventRouter', () => {
       routeMessage(mockWs, undefined, mockLogger);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        { data: undefined, type: 'undefined' },
-        'Tipo de dados inválido'
+        expect.objectContaining({
+          type: 'undefined',
+          isBuffer: false,
+          length: 'unknown'
+        }),
+        'Dados recebidos não são string nem Buffer'
       );
       expect(authMiddleware).not.toHaveBeenCalled();
     });
@@ -481,8 +517,12 @@ describe('eventRouter', () => {
       routeMessage(mockWs, message, mockLogger);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        { data: message, type: 'object' },
-        'Tipo de dados inválido'
+        expect.objectContaining({
+          type: 'object',
+          isBuffer: false,
+          length: 'unknown'
+        }),
+        'Dados recebidos não são string nem Buffer'
       );
       expect(authMiddleware).not.toHaveBeenCalled();
     });
@@ -502,7 +542,11 @@ describe('eventRouter', () => {
       routeMessage(mockWs, 'null', mockLogger);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        { message: null, type: 'object' },
+        expect.objectContaining({
+          messageType: 'object',
+          isArray: false,
+          isNull: true
+        }),
         'Estrutura de mensagem inválida'
       );
       expect(authMiddleware).not.toHaveBeenCalled();
@@ -512,8 +556,12 @@ describe('eventRouter', () => {
       routeMessage(mockWs, 123, mockLogger);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        { data: 123, type: 'number' },
-        'Tipo de dados inválido'
+        expect.objectContaining({
+          type: 'number',
+          isBuffer: false,
+          length: 'unknown'
+        }),
+        'Dados recebidos não são string nem Buffer'
       );
       expect(authMiddleware).not.toHaveBeenCalled();
     });
@@ -522,8 +570,12 @@ describe('eventRouter', () => {
       routeMessage(mockWs, true, mockLogger);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        { data: true, type: 'boolean' },
-        'Tipo de dados inválido'
+        expect.objectContaining({
+          type: 'boolean',
+          isBuffer: false,
+          length: 'unknown'
+        }),
+        'Dados recebidos não são string nem Buffer'
       );
       expect(authMiddleware).not.toHaveBeenCalled();
     });
@@ -535,7 +587,11 @@ describe('eventRouter', () => {
       routeMessage(mockWs, arrayData, mockLogger);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        { message: [message], type: 'object' },
+        expect.objectContaining({
+          messageType: 'object',
+          isArray: true,
+          isNull: false
+        }),
         'Estrutura de mensagem inválida'
       );
       expect(authMiddleware).not.toHaveBeenCalled();
