@@ -195,6 +195,38 @@ describe('wsServer', () => {
         expect(connectionManager.remove).toHaveBeenCalledWith(mockWs);
       });
 
+      it('should handle close event with debug logging when logger.debug exists', () => {
+        mockLogger.debug = vi.fn();
+        connectionHandler(mockWs);
+
+        const closeCall = mockWs.on.mock.calls.find(call => call[0] === 'close');
+        const closeHandler = closeCall[1];
+
+        const code = 1000;
+        const reason = Buffer.from('Normal closure');
+        closeHandler(code, reason);
+
+        expect(mockLogger.debug).toHaveBeenCalledWith(
+          { code: 1000, reason: 'Normal closure' },
+          'Conexão WebSocket fechada'
+        );
+        expect(connectionManager.remove).toHaveBeenCalledWith(mockWs);
+      });
+
+      it('should handle close event without debug logging when logger.debug does not exist', () => {
+        delete mockLogger.debug;
+        connectionHandler(mockWs);
+
+        const closeCall = mockWs.on.mock.calls.find(call => call[0] === 'close');
+        const closeHandler = closeCall[1];
+
+        const code = 1000;
+        const reason = Buffer.from('Normal closure');
+        
+        expect(() => closeHandler(code, reason)).not.toThrow();
+        expect(connectionManager.remove).toHaveBeenCalledWith(mockWs);
+      });
+
       it('should handle close event multiple times', () => {
         connectionHandler(mockWs);
 
@@ -221,8 +253,12 @@ describe('wsServer', () => {
         errorHandler(testError);
 
         expect(mockLogger.error).toHaveBeenCalledWith(
-          { err: testError },
-          'WS error'
+          expect.objectContaining({
+            error: 'Connection error',
+            code: undefined,
+            errno: undefined
+          }),
+          'Erro na conexão WebSocket'
         );
         expect(connectionManager.remove).toHaveBeenCalledWith(mockWs);
       });

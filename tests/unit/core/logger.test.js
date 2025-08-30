@@ -131,4 +131,19 @@ describe('Logger', () => {
 
     expect(logger.level).toBe('debug');
   });
+
+  it('should execute serializers when testSerializers is called', async () => {
+    const { testSerializers } = await import('../../../src/core/logger.js?t=' + Date.now());
+    
+    expect(() => testSerializers()).not.toThrow();
+  });
+
+  it('should test err serializer in development mode', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.resetModules();
+    
+    const { testSerializers } = await import('../../../src/core/logger.js?t=' + Date.now());
+    
+    expect(() => testSerializers()).not.toThrow();
+  });
 });

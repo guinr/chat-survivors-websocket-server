@@ -17,12 +17,19 @@ export function createWsServer({ port, logger }) {
       routeMessage(ws, data, logger);
     });
 
-    ws.on('close', () => {
+    ws.on('close', (code, reason) => {
+      if (logger.debug) {
+        logger.debug({ code, reason: reason?.toString() }, 'Conexão WebSocket fechada');
+      }
       connectionManager.remove(ws);
     });
 
     ws.on('error', (err) => {
-      logger.error({ err }, 'WS error');
+      logger.error({ 
+        error: err.message,
+        code: err.code,
+        errno: err.errno
+      }, 'Erro na conexão WebSocket');
       connectionManager.remove(ws);
     });
   });

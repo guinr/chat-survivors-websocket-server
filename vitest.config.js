@@ -12,7 +12,15 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html']
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/**',
+        'tests/**',
+        'coverage/**',
+        'scripts/**',
+        'simulators/**',
+        '*.config.js'
+      ]
     }
   }
 });

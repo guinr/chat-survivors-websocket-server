@@ -7,11 +7,16 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "dev:clean": "node scripts/dev-clean.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "test:coverage:watch": "vitest run --coverage"
+    "test:coverage:watch": "vitest run --coverage",
+    "simulate": "node simulators/run-all.js",
+    "simulate:game": "node simulators/game-simulator.js",
+    "simulate:extensions": "node simulators/extension-simulator.js",
+    "simulate:viewers": "node simulators/viewer-simulator.js"
   },
   "keywords": [
     "websocket",
