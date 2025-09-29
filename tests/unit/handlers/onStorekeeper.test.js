@@ -7,17 +7,27 @@ vi.mock('../../../src/core/storekeeperCache.js', () => ({
   }
 }));
 
+vi.mock('../../../src/server/messageBus.js', () => ({
+  messageBus: {
+    sendToGame: vi.fn()
+  }
+}));
+
 describe('handleStorekeeper', () => {
   let mockWs;
   let mockMessage;
   let mockLogger;
   let storekeeperCache;
+  let messageBus;
 
   beforeEach(async () => {
     vi.clearAllMocks();
 
     const cacheModule = await import('../../../src/core/storekeeperCache.js');
     storekeeperCache = cacheModule.storekeeperCache;
+
+    const messageBusModule = await import('../../../src/server/messageBus.js');
+    messageBus = messageBusModule.messageBus;
 
     mockWs = {
       send: vi.fn(),
@@ -67,6 +77,11 @@ describe('handleStorekeeper', () => {
       { userId: 'user123' },
       'Handler storekeeper chamado'
     );
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      { userId: 'user123' },
+      'Cache vazio - solicitando dados do jogo'
+    );
+    expect(messageBus.sendToGame).toHaveBeenCalledWith('user123', null, 'storekeeper');
     expect(mockLogger.info).toHaveBeenCalledWith(
       { userId: 'user123' },
       'Cache vazio - sem vendedores no momento'

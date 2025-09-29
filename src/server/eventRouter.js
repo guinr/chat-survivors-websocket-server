@@ -5,6 +5,7 @@ import { handleExtension } from '../handlers/onExtension.js';
 import { authMiddleware } from '../middlewares/auth.js';
 import { storekeeperService } from '../core/storekeeperService.js';
 import { messageBus } from './messageBus.js';
+import { connectionManager } from './connectionManager.js';
 
 export function routeMessage(ws, data, logger) {
   let stringData;
@@ -40,6 +41,12 @@ export function routeMessage(ws, data, logger) {
       isArray: Array.isArray(message),
       isNull: message === null
     }, 'Estrutura de mensagem inválida');
+    return;
+  }
+
+  if (message.role === 'game') {
+    connectionManager.addGame(ws);
+    logger.info('Jogo conectado');
     return;
   }
 

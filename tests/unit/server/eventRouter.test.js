@@ -33,6 +33,13 @@ vi.mock('../../../src/server/messageBus.js', () => ({
   }
 }));
 
+vi.mock('../../../src/server/connectionManager.js', () => ({
+  connectionManager: {
+    addGame: vi.fn(),
+    remove: vi.fn()
+  }
+}));
+
 describe('eventRouter', () => {
   let mockWs;
   let mockLogger;
@@ -43,6 +50,7 @@ describe('eventRouter', () => {
   let handleExtension;
   let storekeeperService;
   let messageBus;
+  let connectionManager;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -54,6 +62,7 @@ describe('eventRouter', () => {
     const extensionModule = await import('../../../src/handlers/onExtension.js');
     const storekeeperServiceModule = await import('../../../src/core/storekeeperService.js');
     const messageBusModule = await import('../../../src/server/messageBus.js');
+    const connectionManagerModule = await import('../../../src/server/connectionManager.js');
 
     rateLimitMiddleware = rateLimitModule.rateLimitMiddleware;
     authMiddleware = authModule.authMiddleware;
@@ -62,6 +71,7 @@ describe('eventRouter', () => {
     handleExtension = extensionModule.handleExtension;
     storekeeperService = storekeeperServiceModule.storekeeperService;
     messageBus = messageBusModule.messageBus;
+    connectionManager = connectionManagerModule.connectionManager;
 
     authMiddleware.mockReturnValue(true);
     rateLimitMiddleware.mockReturnValue(true);
@@ -315,6 +325,17 @@ describe('eventRouter', () => {
       routeMessage(mockWs, JSON.stringify(gameResponse), mockLogger);
 
       expect(storekeeperService.handleGameResponse).toHaveBeenCalledWith(gameResponse);
+      expect(authMiddleware).not.toHaveBeenCalled();
+      expect(rateLimitMiddleware).not.toHaveBeenCalled();
+    });
+
+    it('should register game connection when role is game', () => {
+      const message = { role: 'game', action: 'ready' };
+
+      routeMessage(mockWs, JSON.stringify(message), mockLogger);
+
+      expect(connectionManager.addGame).toHaveBeenCalledWith(mockWs);
+      expect(mockLogger.info).toHaveBeenCalledWith('Jogo conectado');
       expect(authMiddleware).not.toHaveBeenCalled();
       expect(rateLimitMiddleware).not.toHaveBeenCalled();
     });
