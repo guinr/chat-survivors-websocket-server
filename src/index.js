@@ -15,24 +15,37 @@ httpServer.listen(config.port, '0.0.0.0', () => {
   logger.info(`WebSocket: ws://localhost:${config.port}`);
 });
 
-process.on('SIGINT', () => {
-  logger.info('Recebido SIGINT, desligando servidor...');
-  storekeeperService.destroy();
-  wss.close(() => {
-    httpServer.close(() => {
-      logger.info('Servidor fechado');
-      process.exit(0);
-    });
-  });
-});
+function gracefulShutdown(signal) {
+  logger.info(`Recebido ${signal}, desligando servidor...`);
+  
+  const shutdownTimeout = setTimeout(() => {
+    logger.error('Shutdown timeout - forçando encerramento');
+    process.exit(1);
+  }, 5000);
 
-process.on('SIGTERM', () => {
-  logger.info('Recebido SIGTERM, desligando servidor...');
   storekeeperService.destroy();
+  
+  // Limpar timer do heartbeat manualmente se necessário
+  if (wss._heartbeatTimer) {
+    clearInterval(wss._heartbeatTimer);
+    wss._heartbeatTimer = null;
+  }
+  
+  // Encerrar todas as conexões WebSocket
+  if (wss.clients) {
+    wss.clients.forEach(ws => {
+      ws.terminate();
+    });
+  }
+  
   wss.close(() => {
     httpServer.close(() => {
+      clearTimeout(shutdownTimeout);
       logger.info('Servidor fechado');
       process.exit(0);
     });
   });
-});
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

@@ -44,7 +44,7 @@ describe('authMiddleware', () => {
 
   describe('when role requires authentication', () => {
     it('should return false when token is missing for extension role', () => {
-      const message = { role: 'extension', userId: 'user123' };
+      const message = { role: 'extension', user: { id: 'user123' } };
       const result = authMiddleware(message);
       expect(result).toBe(false);
     });
@@ -65,7 +65,7 @@ describe('authMiddleware', () => {
       const message = { 
         role: 'extension', 
         token: 'invalid-token', 
-        userId: 'user123' 
+        user: { id: 'user123' }
       };
       
       const result = authMiddleware(message);
@@ -79,7 +79,7 @@ describe('authMiddleware', () => {
       const message = { 
         role: 'extension', 
         token: validToken, 
-        userId: 'user123' 
+        user: { id: 'user123' }
       };
       
       const result = authMiddleware(message);
@@ -97,7 +97,7 @@ describe('authMiddleware', () => {
       const message = { 
         role: 'extension', 
         token: validToken, 
-        userId: 'user123' 
+        user: { id: 'user123' }
       };
       
       const result = authMiddleware(message);
@@ -118,7 +118,7 @@ describe('authMiddleware', () => {
       const message = { 
         role: 'extension', 
         token: expiredToken, 
-        userId: 'user123' 
+        user: { id: 'user123' }
       };
       
       const result = authMiddleware(message);
@@ -132,7 +132,7 @@ describe('authMiddleware', () => {
       const message = { 
         role: 'extension', 
         token: tokenWithWrongSecret, 
-        userId: 'user123' 
+        user: { id: 'user123' }
       };
       
       const result = authMiddleware(message);
@@ -143,7 +143,7 @@ describe('authMiddleware', () => {
       const message = { 
         role: 'extension', 
         token: 'malformed.token.here', 
-        userId: 'user123' 
+        user: { id: 'user123' }
       };
       
       const result = authMiddleware(message);

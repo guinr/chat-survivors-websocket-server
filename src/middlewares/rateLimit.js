@@ -31,7 +31,8 @@ function checkRateLimit(userId) {
 }
 
 export function rateLimitMiddleware(data) {
-  const { userId, role } = data || {};
+  const { role } = data || {};
+  const userId = data?.user?.id;
   if (role === 'game') return true;
   
   return checkRateLimit(userId);

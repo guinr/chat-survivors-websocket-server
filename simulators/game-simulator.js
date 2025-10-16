@@ -44,7 +44,9 @@ class GameSimulator {
   }
 
   handleGameAction(message) {
-    const { userId, displayName, action } = message;
+    const { user, action } = message;
+    const userId = user?.id;
+    const displayName = user?.display_name;
     
     setTimeout(() => {
       switch (action) {
@@ -86,6 +88,18 @@ class GameSimulator {
             stats: { attack: 25 }
           });
           break;
+
+        case 'storekeeper':
+          this.sendStorekeeperResponse();
+          break;
+
+        case 'join':
+          this.sendGameResponse(userId, displayName, 'joined', {
+            level: Math.floor(Math.random() * 50) + 1,
+            health: 100,
+            experience: Math.floor(Math.random() * 10000)
+          });
+          break;
           
         default:
           console.log(`🤷 Ação desconhecida: ${action}`);
@@ -110,6 +124,25 @@ class GameSimulator {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     }
+  }
+
+  sendStorekeeperResponse() {
+    const storekeeperData = {
+      name: 'Seksal',
+      phrases: [
+        'Bem-vindo à minha loja!',
+        'Tenho os melhores itens da região!',
+        'O que você gostaria de comprar hoje?'
+      ],
+      common_items: [
+        { id: 1, name: 'Poção de Vida', price: 50 },
+        { id: 2, name: 'Espada de Ferro', price: 200 },
+        { id: 3, name: 'Armadura de Couro', price: 150 }
+      ]
+    };
+
+    console.log('📤 Jogo enviando dados do storekeeper:', storekeeperData);
+    this.send(storekeeperData);
   }
 
   startRandomEvents() {

@@ -35,7 +35,7 @@ describe('handleStorekeeper', () => {
     };
 
     mockMessage = {
-      userId: 'user123',
+      user: { id: 'user123' },
       action: 'storekeeper'
     };
 

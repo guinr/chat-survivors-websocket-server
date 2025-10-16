@@ -31,7 +31,6 @@ export const messageBus = {
   sendToGame(userId, displayName = null, action, data = null) {
     if (connectionManager.gameSocket) {
       const resolvedDisplayName = getDisplayNameOrDefault(userId, displayName);
-      console.log(action);
       this.send(connectionManager.gameSocket, {
         user: { id: userId, display_name: resolvedDisplayName },
         action,

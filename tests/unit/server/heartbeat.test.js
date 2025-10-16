@@ -214,6 +214,21 @@ describe('setupHeartbeat', () => {
       closeHandler();
 
       expect(clearIntervalSpy).toHaveBeenCalled();
+      expect(mockWss._heartbeatTimer).toBeNull();
+    });
+
+    it('should handle close event when timer is already null', () => {
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+      
+      setupHeartbeat(mockWss, mockLogger);
+      
+      // Simular timer já limpo
+      mockWss._heartbeatTimer = null;
+      
+      const closeHandler = mockWss.on.mock.calls.find(call => call[0] === 'close')[1];
+      
+      expect(() => closeHandler()).not.toThrow();
+      expect(clearIntervalSpy).not.toHaveBeenCalled();
     });
 
     it('should not execute heartbeat after wss closes', () => {

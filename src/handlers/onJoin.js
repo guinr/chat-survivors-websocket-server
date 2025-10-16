@@ -65,10 +65,10 @@ async function getUserDisplayName(userId, logger) {
 export { getUserDisplayName };
 
 function validateJoinMessage(message) {
-  const { userId } = message;
+  const userId = message?.user?.id;
   
   if (!userId) {
-    return { valid: false, error: 'Join recebido sem userId' };
+    return { valid: false, error: 'Join recebido sem user.id' };
   }
   
   return { valid: true, userId };
@@ -89,7 +89,16 @@ export async function handleJoin(ws, message, logger) {
 
   connectionManager.addExtension(userId, ws);
 
-  const displayName = await getUserDisplayName(userId, logger);
+  // Use display_name from message if available, otherwise fetch from cache/API
+  let displayName = message?.user?.display_name;
+  
+  if (!displayName) {
+    displayName = await getUserDisplayName(userId, logger);
+  } else {
+    // Cache the display_name from the message for future use
+    userCache.set(userId, displayName);
+    logger.debug({ userId, displayName }, 'Display name recebido da extensão e salvo no cache');
+  }
 
   logger.info(`Usuário ${userId} (${displayName}) entrou`);
 

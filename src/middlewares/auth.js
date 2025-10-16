@@ -2,7 +2,8 @@ import jwt from 'jsonwebtoken';
 import { config } from '../core/config.js';
 
 export function authMiddleware(message) {
-  const { role, token, userId } = message;
+  const { role, token } = message;
+  const userId = message?.user?.id;
   
   const allowedRolesWithoutAuth = ['game', 'viewer'];
   if (allowedRolesWithoutAuth.includes(role)) return true;

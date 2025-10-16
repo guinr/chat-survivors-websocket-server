@@ -25,7 +25,7 @@ describe('handleJoin', () => {
   });
 
   it('should use cached display name when available', async () => {
-    const message = { userId: 'test123' };
+    const message = { user: { id: 'test123' } };
     
     userCache.get.mockReturnValue('CachedUser');
 
@@ -43,7 +43,7 @@ describe('handleJoin', () => {
   });
 
   it('should fetch and cache display name when not in cache', async () => {
-    const message = { userId: 'test123' };
+    const message = { user: { id: 'test123' } };
 
     userCache.get.mockReturnValue(null);
 
@@ -73,7 +73,7 @@ describe('handleJoin', () => {
   });
 
   it('should handle cache miss and API failure gracefully', async () => {
-    const message = { userId: 'test123' };
+    const message = { user: { id: 'test123' } };
 
     userCache.get.mockReturnValue(null);
     fetch.mockRejectedValueOnce(new Error('Network error'));
@@ -96,14 +96,14 @@ describe('handleJoin', () => {
 
     await handleJoin(mockWs, message, mockLogger);
 
-    expect(mockLogger.warn).toHaveBeenCalledWith('Join recebido sem userId');
+    expect(mockLogger.warn).toHaveBeenCalledWith('Join recebido sem user.id');
     expect(userCache.get).not.toHaveBeenCalled();
     expect(connectionManager.addExtension).not.toHaveBeenCalled();
     expect(messageBus.sendToGame).not.toHaveBeenCalled();
   });
 
   it('should handle failed access token request', async () => {
-    const message = { userId: 'test123' };
+    const message = { user: { id: 'test123' } };
 
     userCache.get.mockReturnValue(null);
 
@@ -125,7 +125,7 @@ describe('handleJoin', () => {
   });
 
   it('should handle network errors', async () => {
-    const message = { userId: 'test123' };
+    const message = { user: { id: 'test123' } };
 
     userCache.get.mockReturnValue(null);
     
@@ -143,7 +143,7 @@ describe('handleJoin', () => {
   });
 
   it('should handle failed user info request without message property', async () => {
-    const message = { userId: 'test123' };
+    const message = { user: { id: 'test123' } };
 
     userCache.get.mockReturnValue(null);
     
@@ -170,7 +170,7 @@ describe('handleJoin', () => {
   });
 
   it('should handle user data without display_name property', async () => {
-    const message = { userId: 'test123' };
+    const message = { user: { id: 'test123' } };
 
     userCache.get.mockReturnValue(null);
     
@@ -195,7 +195,7 @@ describe('handleJoin', () => {
   });
 
   it('should handle failed access token request using statusText when no message', async () => {
-    const message = { userId: 'test123' };
+    const message = { user: { id: 'test123' } };
 
     userCache.get.mockReturnValue(null);
 
@@ -214,5 +214,24 @@ describe('handleJoin', () => {
     );
     expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (Desconhecido) entrou');
     expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'Desconhecido', 'join');
+  });
+
+  it('should use display_name from message when provided', async () => {
+    const message = { user: { id: 'test123', display_name: 'ProvidedName' } };
+    
+    userCache.get.mockReturnValue(null);
+
+    await handleJoin(mockWs, message, mockLogger);
+
+    expect(userCache.get).not.toHaveBeenCalled(); // Não deve buscar no cache
+    expect(fetch).not.toHaveBeenCalled(); // Não deve fazer fetch da API
+    expect(userCache.set).toHaveBeenCalledWith('test123', 'ProvidedName'); // Deve cachear o nome fornecido
+    expect(connectionManager.addExtension).toHaveBeenCalledWith('test123', mockWs);
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      { userId: 'test123', displayName: 'ProvidedName' },
+      'Display name recebido da extensão e salvo no cache'
+    );
+    expect(mockLogger.info).toHaveBeenCalledWith('Usuário test123 (ProvidedName) entrou');
+    expect(messageBus.sendToGame).toHaveBeenCalledWith('test123', 'ProvidedName', 'join');
   });
 });

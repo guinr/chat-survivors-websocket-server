@@ -10,6 +10,7 @@ class ExtensionSimulator {
     this.clientSecret = clientSecret;
     this.ws = null;
     this.isConnected = false;
+    this.hasJoined = false;
     this.token = this.generateToken();
   }
 
@@ -61,7 +62,8 @@ class ExtensionSimulator {
       () => this.sendAction('luc', { points: 3 }),
       () => this.sendAction('buy', { item: 'Potion', quantity: 1 }),
       () => this.sendAction('sell', { item: 'Old Sword', quantity: 1 }),
-      () => this.sendAction('equip', { item: 'Magic Ring', slot: 'ring' })
+      () => this.sendAction('equip', { item: 'Magic Ring', slot: 'ring' }),
+      () => this.sendStorekeeper()
     ];
 
     const scheduleNextAction = () => {
@@ -80,16 +82,49 @@ class ExtensionSimulator {
   sendAction(action, data = null) {
     if (!this.isConnected) return;
     
+    // Para join, enviar primeiro
+    if (!this.hasJoined) {
+      this.sendJoin();
+      this.hasJoined = true;
+      setTimeout(() => this.sendAction(action, data), 1000);
+      return;
+    }
+    
     const message = {
       role: 'extension',
       token: this.token,
-      userId: this.userId,
-      displayName: this.displayName,
+      user: { id: this.userId, display_name: this.displayName },
       action,
-      data
+      value: data?.points || data?.quantity || 1
     };
     
-    console.log(`📤 ${this.displayName} enviando:`, { action, data });
+    console.log(`📤 ${this.displayName} enviando:`, { action, value: message.value });
+    this.send(message);
+  }
+
+  sendJoin() {
+    const message = {
+      role: 'extension',
+      token: this.token,
+      user: { id: this.userId, display_name: this.displayName },
+      action: 'join'
+    };
+    
+    console.log(`📤 ${this.displayName} fazendo join`);
+    this.send(message);
+  }
+
+  sendStorekeeper() {
+    if (!this.isConnected) return;
+    
+    const message = {
+      role: 'extension',
+      token: this.token,
+      user: { id: this.userId, display_name: this.displayName },
+      action: 'storekeeper'
+    };
+    
+    console.log(`📤 ${this.displayName} solicitando storekeeper`);
     this.send(message);
   }
 

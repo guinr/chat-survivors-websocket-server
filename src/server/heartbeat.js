@@ -16,5 +16,12 @@ export function setupHeartbeat(wss, logger) {
     });
   }, config.heartbeatInterval);
 
-  wss.on('close', () => clearInterval(timer));
+  wss._heartbeatTimer = timer;
+
+  wss.on('close', () => {
+    if (wss._heartbeatTimer) {
+      clearInterval(wss._heartbeatTimer);
+      wss._heartbeatTimer = null;
+    }
+  });
 }

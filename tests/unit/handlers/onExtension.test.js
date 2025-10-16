@@ -27,7 +27,7 @@ describe('onExtension', () => {
 
   describe('handleExtension', () => {
     it('deve processar ação str válida com usuário no cache', () => {
-      const message = { userId: '123', action: 'str', value: 10 };
+      const message = { user: { id: '123' }, action: 'str', value: 10 };
       userCache.get.mockReturnValue('TestUser');
 
       handleExtension(mockWs, message, mockLogger);
@@ -44,7 +44,7 @@ describe('onExtension', () => {
     });
 
     it('deve processar ação agi válida sem usuário no cache', () => {
-      const message = { userId: '456', action: 'agi' };
+      const message = { user: { id: '456' }, action: 'agi' };
       userCache.get.mockReturnValue(null);
 
       handleExtension(mockWs, message, mockLogger);
@@ -57,7 +57,7 @@ describe('onExtension', () => {
     });
 
     it('deve processar ação vit válida', () => {
-      const message = { userId: '789', action: 'vit', value: 5 };
+      const message = { user: { id: '789' }, action: 'vit', value: 5 };
       userCache.get.mockReturnValue('VitUser');
 
       handleExtension(mockWs, message, mockLogger);
@@ -67,7 +67,7 @@ describe('onExtension', () => {
     });
 
     it('deve processar ação luc válida', () => {
-      const message = { userId: '111', action: 'luc', value: 7 };
+      const message = { user: { id: '111' }, action: 'luc', value: 7 };
       userCache.get.mockReturnValue('LuckyUser');
 
       handleExtension(mockWs, message, mockLogger);
@@ -77,7 +77,7 @@ describe('onExtension', () => {
     });
 
     it('deve processar ação equip válida', () => {
-      const message = { userId: '222', action: 'equip', value: 'sword' };
+      const message = { user: { id: '222' }, action: 'equip', value: 'sword' };
       userCache.get.mockReturnValue('EquipUser');
 
       handleExtension(mockWs, message, mockLogger);
@@ -87,7 +87,7 @@ describe('onExtension', () => {
     });
 
     it('deve processar ação buy válida', () => {
-      const message = { userId: '333', action: 'buy', value: 'potion' };
+      const message = { user: { id: '333' }, action: 'buy', value: 'potion' };
       userCache.get.mockReturnValue('BuyerUser');
 
       handleExtension(mockWs, message, mockLogger);
@@ -97,7 +97,7 @@ describe('onExtension', () => {
     });
 
     it('deve processar ação sell válida', () => {
-      const message = { userId: '444', action: 'sell', value: 'helmet' };
+      const message = { user: { id: '444' }, action: 'sell', value: 'helmet' };
       userCache.get.mockReturnValue('SellerUser');
 
       handleExtension(mockWs, message, mockLogger);
@@ -113,11 +113,11 @@ describe('onExtension', () => {
 
       expect(userCache.get).not.toHaveBeenCalled();
       expect(messageBus.sendToGame).not.toHaveBeenCalled();
-      expect(mockLogger.warn).toHaveBeenCalledWith('Mensagem de extensão recebida sem userId');
+      expect(mockLogger.warn).toHaveBeenCalledWith('Mensagem de extensão recebida sem user.id');
     });
 
     it('deve falhar quando action está ausente', () => {
-      const message = { userId: '123', value: 10 };
+      const message = { user: { id: '123' }, value: 10 };
 
       handleExtension(mockWs, message, mockLogger);
 
@@ -127,7 +127,7 @@ describe('onExtension', () => {
     });
 
     it('deve falhar quando action não é permitida', () => {
-      const message = { userId: '123', action: 'invalid', value: 10 };
+      const message = { user: { id: '123' }, action: 'invalid', value: 10 };
 
       handleExtension(mockWs, message, mockLogger);
 
@@ -137,7 +137,7 @@ describe('onExtension', () => {
     });
 
     it('deve usar "Desconhecido" quando usuário não está no cache', () => {
-      const message = { userId: '555', action: 'str', value: 1 };
+      const message = { user: { id: '555' }, action: 'str', value: 1 };
       userCache.get.mockReturnValue(null);
 
       handleExtension(mockWs, message, mockLogger);

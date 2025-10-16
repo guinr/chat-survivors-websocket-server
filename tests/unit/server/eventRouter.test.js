@@ -91,7 +91,7 @@ describe('eventRouter', () => {
 
   describe('JSON parsing', () => {
     it('should handle valid JSON message', () => {
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' }, role: 'extension', token: 'valid-token' };
       const data = JSON.stringify(message);
 
       routeMessage(mockWs, data, mockLogger);
@@ -101,7 +101,7 @@ describe('eventRouter', () => {
     });
 
     it('should handle Buffer data by converting to string', () => {
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' }, role: 'extension', token: 'valid-token' };
       const bufferData = Buffer.from(JSON.stringify(message), 'utf8');
 
       routeMessage(mockWs, bufferData, mockLogger);
@@ -159,7 +159,7 @@ describe('eventRouter', () => {
   describe('authentication middleware', () => {
     it('should proceed when auth passes', () => {
       authMiddleware.mockReturnValue(true);
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' }, role: 'extension' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
@@ -172,57 +172,57 @@ describe('eventRouter', () => {
 
     it('should block and log when auth fails', () => {
       authMiddleware.mockReturnValue(false);
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' }, role: 'extension' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
       expect(authMiddleware).toHaveBeenCalledWith(message);
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário user123 não autorizado');
+        expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[34m[EXTENSION]\x1b[0m \x1b[31mUsuário user123 não autorizado\x1b[0m');
       expect(rateLimitMiddleware).not.toHaveBeenCalled();
       expect(handleJoin).not.toHaveBeenCalled();
     });
 
-    it('should handle message without userId in auth failure', () => {
+    it('should handle message without user.id in auth failure', () => {
       authMiddleware.mockReturnValue(false);
       const message = { action: 'join' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
+        expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[37m[UNKNOWN]\x1b[0m \x1b[31mUsuário desconhecido não autorizado\x1b[0m');
     });
 
-    it('should handle message with empty string userId in auth failure', () => {
+    it('should handle message with empty string user.id in auth failure', () => {
       authMiddleware.mockReturnValue(false);
-      const message = { action: 'join', userId: '' };
+      const message = { action: 'join', user: { id: '' } };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
+        expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[37m[UNKNOWN]\x1b[0m \x1b[31mUsuário desconhecido não autorizado\x1b[0m');
     });
 
-    it('should handle message with null userId in auth failure', () => {
+    it('should handle message with null user.id in auth failure', () => {
       authMiddleware.mockReturnValue(false);
-      const message = { action: 'join', userId: null };
+      const message = { action: 'join', user: { id: null } };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
+      expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[37m[UNKNOWN]\x1b[0m \x1b[31mUsuário desconhecido não autorizado\x1b[0m');
     });
 
-    it('should handle message with zero userId in auth failure', () => {
+    it('should handle message with zero user.id in auth failure', () => {
       authMiddleware.mockReturnValue(false);
-      const message = { action: 'join', userId: 0 };
+      const message = { action: 'join', user: { id: 0 } };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido não autorizado');
+      expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[37m[UNKNOWN]\x1b[0m \x1b[31mUsuário desconhecido não autorizado\x1b[0m');
     });
   });
 
   describe('rate limit middleware', () => {
     it('should proceed when rate limit passes', () => {
       rateLimitMiddleware.mockReturnValue(true);
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' }, role: 'extension' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
@@ -235,16 +235,16 @@ describe('eventRouter', () => {
 
     it('should block and log when rate limit fails', () => {
       rateLimitMiddleware.mockReturnValue(false);
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' }, role: 'extension' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
       expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário user123 excedeu rate limit');
+        expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[34m[EXTENSION]\x1b[0m \x1b[33mUsuário user123 excedeu rate limit\x1b[0m');
       expect(handleJoin).not.toHaveBeenCalled();
     });
 
-    it('should handle message without userId in rate limit', () => {
+    it('should handle message without user.id in rate limit', () => {
       const message = { action: 'join' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
@@ -252,43 +252,43 @@ describe('eventRouter', () => {
       expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
     });
 
-    it('should handle message with empty string userId in rate limit failure', () => {
+    it('should handle message with empty string user.id in rate limit failure', () => {
       rateLimitMiddleware.mockReturnValue(false);
-      const message = { action: 'join', userId: '' };
+      const message = { action: 'join', user: { id: '' } };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
       expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido excedeu rate limit');
+      expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[37m[UNKNOWN]\x1b[0m \x1b[33mUsuário desconhecido excedeu rate limit\x1b[0m');
       expect(handleJoin).not.toHaveBeenCalled();
     });
 
-    it('should handle message with null userId in rate limit failure', () => {
+    it('should handle message with null user.id in rate limit failure', () => {
       rateLimitMiddleware.mockReturnValue(false);
-      const message = { action: 'join', userId: null };
+      const message = { action: 'join', user: { id: null } };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
       expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido excedeu rate limit');
+      expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[37m[UNKNOWN]\x1b[0m \x1b[33mUsuário desconhecido excedeu rate limit\x1b[0m');
       expect(handleJoin).not.toHaveBeenCalled();
     });
 
-    it('should handle message with zero userId in rate limit failure', () => {
+    it('should handle message with zero user.id in rate limit failure', () => {
       rateLimitMiddleware.mockReturnValue(false);
-      const message = { action: 'join', userId: 0 };
+      const message = { action: 'join', user: { id: 0 } };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
       expect(rateLimitMiddleware).toHaveBeenCalledWith(message);
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário desconhecido excedeu rate limit');
+      expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[37m[UNKNOWN]\x1b[0m \x1b[33mUsuário desconhecido excedeu rate limit\x1b[0m');
       expect(handleJoin).not.toHaveBeenCalled();
     });
   });
 
   describe('message routing', () => {
     it('should route join action to handleJoin', () => {
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' }, role: 'extension', token: 'valid-token' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
@@ -296,7 +296,7 @@ describe('eventRouter', () => {
     });
 
     it('should route storekeeper action to handleStorekeeper', () => {
-      const message = { action: 'storekeeper', userId: 'user123' };
+      const message = { action: 'storekeeper', user: { id: 'user123' }, role: 'extension', token: 'valid-token' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
@@ -307,7 +307,7 @@ describe('eventRouter', () => {
       const extensionActions = ['str', 'agi', 'vit', 'luc', 'equip', 'buy', 'sell'];
       
       extensionActions.forEach(action => {
-        const message = { action, userId: 'user123', value: 10 };
+        const message = { action, user: { id: 'user123' }, value: 10, role: 'extension', token: 'valid-token' };
 
         routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
@@ -335,7 +335,7 @@ describe('eventRouter', () => {
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
       expect(connectionManager.addGame).toHaveBeenCalledWith(mockWs);
-      expect(mockLogger.info).toHaveBeenCalledWith('Jogo conectado');
+      expect(mockLogger.info).toHaveBeenCalledWith('\x1b[32m[GAME]\x1b[0m Jogo conectado');
       expect(authMiddleware).not.toHaveBeenCalled();
       expect(rateLimitMiddleware).not.toHaveBeenCalled();
     });
@@ -422,34 +422,28 @@ describe('eventRouter', () => {
     });
 
     it('should handle unknown action', () => {
-      const message = { action: 'unknown', userId: 'user123' };
+      const message = { action: 'unknown', user: { id: 'user123' }, role: 'extension', token: 'valid-token' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        { action: 'unknown' },
-        'Tipo de mensagem desconhecido'
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[34m[EXTENSION]\x1b[0m \x1b[33mTipo de mensagem desconhecido: unknown\x1b[0m');
       expect(handleJoin).not.toHaveBeenCalled();
       expect(handleStorekeeper).not.toHaveBeenCalled();
       expect(handleExtension).not.toHaveBeenCalled();
     });
 
     it('should handle message without action', () => {
-      const message = { userId: 'user123' };
+      const message = { user: { id: 'user123' } };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        { action: undefined },
-        'Tipo de mensagem desconhecido'
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[37m[UNKNOWN]\x1b[0m \x1b[33mTipo de mensagem desconhecido: undefined\x1b[0m');
     });
   });
 
   describe('integration flow', () => {
     it('should complete full flow for valid join message', () => {
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' }, role: 'extension', token: 'valid-token' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
@@ -464,7 +458,7 @@ describe('eventRouter', () => {
     });
 
     it('should complete full flow for valid storekeeper message', () => {
-      const message = { action: 'storekeeper', userId: 'user123' };
+      const message = { action: 'storekeeper', user: { id: 'user123' }, role: 'extension', token: 'valid-token' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
@@ -480,26 +474,26 @@ describe('eventRouter', () => {
 
     it('should stop at auth when auth fails', () => {
       authMiddleware.mockReturnValue(false);
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' }, role: 'extension' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
       expect(authMiddleware).toHaveBeenCalled();
       expect(rateLimitMiddleware).not.toHaveBeenCalled();
       expect(handleJoin).not.toHaveBeenCalled();
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário user123 não autorizado');
+      expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[34m[EXTENSION]\x1b[0m \x1b[31mUsuário user123 não autorizado\x1b[0m');
     });
 
     it('should stop at rate limit when rate limit fails', () => {
       rateLimitMiddleware.mockReturnValue(false);
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' }, role: 'extension' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
       expect(authMiddleware).toHaveBeenCalled();
       expect(rateLimitMiddleware).toHaveBeenCalled();
       expect(handleJoin).not.toHaveBeenCalled();
-      expect(mockLogger.warn).toHaveBeenCalledWith('Usuário user123 excedeu rate limit');
+      expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[34m[EXTENSION]\x1b[0m \x1b[33mUsuário user123 excedeu rate limit\x1b[0m');
     });
   });
 
@@ -533,7 +527,7 @@ describe('eventRouter', () => {
     });
 
     it('should handle object passed as data with type validation', () => {
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' } };
 
       routeMessage(mockWs, message, mockLogger);
 
@@ -549,14 +543,11 @@ describe('eventRouter', () => {
     });
 
     it('should handle message with null action', () => {
-      const message = { action: null, userId: 'user123' };
+      const message = { action: null, user: { id: 'user123' } };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        { action: null },
-        'Tipo de mensagem desconhecido'
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith('\x1b[37m[UNKNOWN]\x1b[0m \x1b[33mTipo de mensagem desconhecido: null\x1b[0m');
     });
 
     it('should handle string null as data with structure validation', () => {
@@ -602,7 +593,7 @@ describe('eventRouter', () => {
     });
 
     it('should handle array as string data with structure validation', () => {
-      const message = { action: 'join', userId: 'user123' };
+      const message = { action: 'join', user: { id: 'user123' } };
       const arrayData = JSON.stringify([message]);
 
       routeMessage(mockWs, arrayData, mockLogger);

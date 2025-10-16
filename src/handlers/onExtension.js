@@ -2,10 +2,11 @@ import { messageBus } from '../server/messageBus.js';
 import { userCache } from '../core/userCache.js';
 
 function validateExtensionMessage(message) {
-  const { userId, action, value } = message;
+  const { action, value } = message;
+  const userId = message?.user?.id;
   
   if (!userId) {
-    return { valid: false, error: 'Mensagem de extensão recebida sem userId' };
+    return { valid: false, error: 'Mensagem de extensão recebida sem user.id' };
   }
   
   if (!action) {
@@ -21,7 +22,7 @@ function validateExtensionMessage(message) {
 }
 
 export function handleExtension(ws, message, logger) {
-  logger.info({ userId: message.userId, action: message.action }, 'Handler extension chamado');
+  logger.info({ userId: message?.user?.id, action: message.action }, 'Handler extension chamado');
 
   const validation = validateExtensionMessage(message);
   if (!validation.valid) {

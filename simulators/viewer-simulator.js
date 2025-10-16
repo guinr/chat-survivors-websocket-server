@@ -46,7 +46,10 @@ class ViewerSimulator {
     
     const message = {
       role: 'viewer',
-      userId: this.userId,
+      user: { 
+        id: this.userId,
+        display_name: this.displayName 
+      },
       action: 'join'
     };
     

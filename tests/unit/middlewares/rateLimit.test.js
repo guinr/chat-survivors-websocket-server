@@ -35,13 +35,13 @@ describe('rateLimitMiddleware', () => {
   });
 
   it('should allow the first message from a user', () => {
-    const data = { userId: 'user123' };
+    const data = { user: { id: 'user123' } };
     const result = rateLimitMiddleware(data);
     expect(result).toBe(true);
   });
 
   it('should allow messages within the per-second limit', () => {
-    const data = { userId: 'user123' };
+    const data = { user: { id: 'user123' } };
 
     expect(rateLimitMiddleware(data)).toBe(true);
     expect(rateLimitMiddleware(data)).toBe(true);
@@ -51,7 +51,7 @@ describe('rateLimitMiddleware', () => {
   });
 
   it('should block messages that exceed the per-second limit', () => {
-    const data = { userId: 'user123' };
+    const data = { user: { id: 'user123' } };
 
     
     for (let i = 0; i < 5; i++) {
@@ -66,7 +66,7 @@ describe('rateLimitMiddleware', () => {
   });
 
   it('should reset the counter after 1 second', () => {
-    const data = { userId: 'user123' };
+    const data = { user: { id: 'user123' } };
 
     
     for (let i = 0; i < 5; i++) {
@@ -84,8 +84,8 @@ describe('rateLimitMiddleware', () => {
   });
 
   it('should track different users independently', () => {
-    const user1Data = { userId: 'user1' };
-    const user2Data = { userId: 'user2' };
+    const user1Data = { user: { id: 'user1' } };
+    const user2Data = { user: { id: 'user2' } };
 
     
     for (let i = 0; i < 5; i++) {
@@ -101,7 +101,7 @@ describe('rateLimitMiddleware', () => {
   });
 
   it('should allow messages after resetting the time window', () => {
-    const data = { userId: 'user123' };
+    const data = { user: { id: 'user123' } };
 
     
     expect(rateLimitMiddleware(data)).toBe(true);
@@ -125,7 +125,7 @@ describe('rateLimitMiddleware', () => {
   });
 
   it('should correctly update the counter within the same time window', () => {
-    const data = { userId: 'user123' };
+    const data = { user: { id: 'user123' } };
 
     
     const baseTime = 1000000;
@@ -151,13 +151,13 @@ describe('rateLimitMiddleware', () => {
   });
 
   it('should handle object format with userId', () => {
-    const data = { userId: 'user456' };
+    const data = { user: { id: 'user456' } };
     const result = rateLimitMiddleware(data);
     expect(result).toBe(true);
   });
 
   it('should handle object format with game role', () => {
-    const data = { userId: 'user456', role: 'game' };
+    const data = { user: { id: 'user456' }, role: 'game' };
     const result = rateLimitMiddleware(data);
     expect(result).toBe(true);
   });
