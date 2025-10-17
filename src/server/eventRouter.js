@@ -66,7 +66,9 @@ export function routeMessage(ws, data, logger) {
         8: 'used',
         9: 'equipped',
         10: 'buyed',
-        11: 'sold'
+        11: 'sold',
+        12: 'shop_opened',
+        13: 'cant_buy',
       };
       
       const action = gameEvents[message.event];
@@ -122,6 +124,7 @@ export function routeMessage(ws, data, logger) {
     case 'equip':
     case 'buy':
     case 'sell':
+    case 'shop':
       logger.info(`${roleColor} Ação ${action}: ${message?.user?.id}`);
       handleExtension(ws, message, logger);
       break;

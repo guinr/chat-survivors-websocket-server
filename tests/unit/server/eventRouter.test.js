@@ -304,10 +304,10 @@ describe('eventRouter', () => {
     });
 
     it('should route extension actions to handleExtension', () => {
-      const extensionActions = ['str', 'agi', 'vit', 'luc', 'equip', 'buy', 'sell'];
+      const extensionActions = ['str', 'agi', 'vit', 'luc', 'equip', 'buy', 'sell', 'shop'];
       
       extensionActions.forEach(action => {
-        const message = { action, user: { id: 'user123' }, value: 10, role: 'extension', token: 'valid-token' };
+        const message = { action, user: { id: 'user123' }, data: 10, role: 'extension', token: 'valid-token' };
 
         routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
@@ -354,23 +354,35 @@ describe('eventRouter', () => {
       expect(rateLimitMiddleware).not.toHaveBeenCalled();
     });
 
-    it('should handle all game response actions', () => {
-      const gameActions = [
-        'joined', 'cant_join', 'died', 'experience_up', 'level_up', 
-        'health_changed', 'status_increased', 'inventory', 'used', 
-        'equipped', 'buyed', 'sold'
+    it('should handle all game event numbers', () => {
+      const gameEvents = [
+        { event: 0, action: 'joined' },
+        { event: 1, action: 'cant_join' },
+        { event: 2, action: 'died' },
+        { event: 3, action: 'experience_up' },
+        { event: 4, action: 'level_up' },
+        { event: 5, action: 'health_changed' },
+        { event: 6, action: 'status_increased' },
+        { event: 7, action: 'inventory' },
+        { event: 8, action: 'used' },
+        { event: 9, action: 'equipped' },
+        { event: 10, action: 'buyed' },
+        { event: 11, action: 'sold' },
+        { event: 12, action: 'shop_opened' },
+        { event: 13, action: 'cant_buy' }
       ];
 
-      gameActions.forEach(action => {
+      gameEvents.forEach(({ event, action }, index) => {
         const gameResponse = {
           user: { id: 'user456', display_name: 'GameUser' },
-          action,
+          event,
+          role: 'game',
           data: { test: 'data' }
         };
 
         routeMessage(mockWs, JSON.stringify(gameResponse), mockLogger);
 
-        expect(messageBus.sendToUser).toHaveBeenCalledWith('user456', 'GameUser', action, { test: 'data' });
+        expect(messageBus.sendToUser).toHaveBeenNthCalledWith(index + 1, 'user456', 'GameUser', action, { test: 'data' });
       });
     });
 
@@ -395,6 +407,34 @@ describe('eventRouter', () => {
       routeMessage(mockWs, JSON.stringify(gameResponse), mockLogger);
 
       expect(messageBus.sendToUser).toHaveBeenCalledWith('user999', undefined, 'health_changed', { health: 80 });
+    });
+
+    it('should handle shop_opened event 12 from game', () => {
+      const shopResponse = {
+        user: { id: 'user123', display_name: 'João' },
+        event: 12,
+        role: 'game',
+        data: { inventory: { items: ['sword', 'potion'] } }
+      };
+
+      routeMessage(mockWs, JSON.stringify(shopResponse), mockLogger);
+
+      expect(messageBus.sendToUser).toHaveBeenCalledWith('user123', 'João', 'shop_opened', { inventory: { items: ['sword', 'potion'] } });
+      expect(mockLogger.info).toHaveBeenCalledWith('\x1b[32m[GAME]\x1b[0m Enviando evento 12 (shop_opened) para João');
+    });
+
+    it('should handle cant_buy event 13 from game', () => {
+      const cantBuyResponse = {
+        user: { id: 'user456', display_name: 'Maria' },
+        event: 13,
+        role: 'game',
+        data: { reason: 'insufficient_gold' }
+      };
+
+      routeMessage(mockWs, JSON.stringify(cantBuyResponse), mockLogger);
+
+      expect(messageBus.sendToUser).toHaveBeenCalledWith('user456', 'Maria', 'cant_buy', { reason: 'insufficient_gold' });
+      expect(mockLogger.info).toHaveBeenCalledWith('\x1b[32m[GAME]\x1b[0m Enviando evento 13 (cant_buy) para Maria');
     });
 
     it('should not route when user.id is missing', () => {
