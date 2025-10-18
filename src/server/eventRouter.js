@@ -69,6 +69,7 @@ export function routeMessage(ws, data, logger) {
         11: 'sold',
         12: 'shop_opened',
         13: 'cant_buy',
+        14: 'cant_sell',
       };
       
       const action = gameEvents[message.event];
