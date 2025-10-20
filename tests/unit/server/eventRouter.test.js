@@ -370,7 +370,8 @@ describe('eventRouter', () => {
         { event: 11, action: 'sold' },
         { event: 12, action: 'shop_opened' },
         { event: 13, action: 'cant_buy' },
-        { event: 14, action: 'cant_sell' }
+        { event: 14, action: 'cant_sell' },
+        { event: 15, action: 'cant_equip' }
       ];
 
       gameEvents.forEach(({ event, action }, index) => {
@@ -450,6 +451,20 @@ describe('eventRouter', () => {
 
       expect(messageBus.sendToUser).toHaveBeenCalledWith('user789', 'Pedro', 'cant_sell', { reason: 'item_bound' });
       expect(mockLogger.info).toHaveBeenCalledWith('\x1b[32m[GAME]\x1b[0m Enviando evento 14 (cant_sell) para Pedro');
+    });
+
+    it('should handle cant_equip event 15 from game', () => {
+      const cantEquipResponse = {
+        user: { id: 'user101', display_name: 'Ana' },
+        event: 15,
+        role: 'game',
+        data: { reason: 'level_requirement' }
+      };
+
+      routeMessage(mockWs, JSON.stringify(cantEquipResponse), mockLogger);
+
+      expect(messageBus.sendToUser).toHaveBeenCalledWith('user101', 'Ana', 'cant_equip', { reason: 'level_requirement' });
+      expect(mockLogger.info).toHaveBeenCalledWith('\x1b[32m[GAME]\x1b[0m Enviando evento 15 (cant_equip) para Ana');
     });
 
     it('should not route when user.id is missing', () => {
