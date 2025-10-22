@@ -2,6 +2,7 @@ import { rateLimitMiddleware } from '../middlewares/rateLimit.js';
 import { handleJoin } from '../handlers/onJoin.js';
 import { handleStorekeeper } from '../handlers/onStorekeeper.js';
 import { handleExtension } from '../handlers/onExtension.js';
+import { handleAuth } from '../handlers/onAuth.js';
 import { authMiddleware } from '../middlewares/auth.js';
 import { storekeeperService } from '../core/storekeeperService.js';
 import { messageBus } from './messageBus.js';
@@ -114,6 +115,10 @@ export function routeMessage(ws, data, logger) {
     case 'join':
       logger.info(`${roleColor} Fazendo join: ${message?.user?.id}`);
       handleJoin(ws, message, logger);
+      break;
+    case 'auth':
+      logger.info(`${roleColor} Fazendo autenticação: ${message?.user?.id || 'token JWT'}`);
+      handleAuth(ws, message, logger);
       break;
     case 'storekeeper':
       logger.info(`${roleColor} Consultando storekeeper: ${message?.user?.id}`);

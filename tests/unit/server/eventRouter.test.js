@@ -21,6 +21,10 @@ vi.mock('../../../src/handlers/onExtension.js', () => ({
   handleExtension: vi.fn()
 }));
 
+vi.mock('../../../src/handlers/onAuth.js', () => ({
+  handleAuth: vi.fn()
+}));
+
 vi.mock('../../../src/core/storekeeperService.js', () => ({
   storekeeperService: {
     handleGameResponse: vi.fn()
@@ -48,6 +52,7 @@ describe('eventRouter', () => {
   let handleJoin;
   let handleStorekeeper;
   let handleExtension;
+  let handleAuth;
   let storekeeperService;
   let messageBus;
   let connectionManager;
@@ -60,6 +65,7 @@ describe('eventRouter', () => {
     const joinModule = await import('../../../src/handlers/onJoin.js');
     const storekeeperModule = await import('../../../src/handlers/onStorekeeper.js');
     const extensionModule = await import('../../../src/handlers/onExtension.js');
+    const authHandlerModule = await import('../../../src/handlers/onAuth.js');
     const storekeeperServiceModule = await import('../../../src/core/storekeeperService.js');
     const messageBusModule = await import('../../../src/server/messageBus.js');
     const connectionManagerModule = await import('../../../src/server/connectionManager.js');
@@ -69,6 +75,7 @@ describe('eventRouter', () => {
     handleJoin = joinModule.handleJoin;
     handleStorekeeper = storekeeperModule.handleStorekeeper;
     handleExtension = extensionModule.handleExtension;
+    handleAuth = authHandlerModule.handleAuth;
     storekeeperService = storekeeperServiceModule.storekeeperService;
     messageBus = messageBusModule.messageBus;
     connectionManager = connectionManagerModule.connectionManager;
@@ -287,12 +294,12 @@ describe('eventRouter', () => {
   });
 
   describe('message routing', () => {
-    it('should route join action to handleJoin', () => {
-      const message = { action: 'join', user: { id: 'user123' }, role: 'extension', token: 'valid-token' };
+    it('should route auth action to handleAuth', () => {
+      const message = { action: 'auth', token: 'jwt_token_here', role: 'extension' };
 
       routeMessage(mockWs, JSON.stringify(message), mockLogger);
 
-      expect(handleJoin).toHaveBeenCalledWith(mockWs, message, mockLogger);
+      expect(handleAuth).toHaveBeenCalledWith(mockWs, message, mockLogger);
     });
 
     it('should route storekeeper action to handleStorekeeper', () => {
