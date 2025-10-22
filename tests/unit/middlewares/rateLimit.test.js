@@ -24,14 +24,28 @@ describe('rateLimitMiddleware', () => {
     vi.resetModules();
   });
 
-  it('should allow messages when userId is undefined', () => {
-    const result = rateLimitMiddleware(undefined);
+  it('should block messages when userId is undefined and role is not viewer', () => {
+    const data = { role: 'extension' };
+    const result = rateLimitMiddleware(data);
     expect(result).toBe(false);
   });
 
-  it('should allow messages when userId is null', () => {
-    const result = rateLimitMiddleware(null);
+  it('should block messages when userId is null and role is not viewer', () => {
+    const data = { user: { id: null }, role: 'extension' };
+    const result = rateLimitMiddleware(data);
     expect(result).toBe(false);
+  });
+
+  it('should allow viewer messages without userId (for auth)', () => {
+    const data = { role: 'viewer' };
+    const result = rateLimitMiddleware(data);
+    expect(result).toBe(true);
+  });
+
+  it('should allow viewer messages with userId', () => {
+    const data = { user: { id: 'viewer123' }, role: 'viewer' };
+    const result = rateLimitMiddleware(data);
+    expect(result).toBe(true);
   });
 
   it('should allow the first message from a user', () => {

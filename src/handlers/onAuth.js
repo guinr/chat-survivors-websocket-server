@@ -6,6 +6,7 @@ export async function handleAuth(ws, message, logger) {
 
   if (!token) {
     logger.warn('[AUTH] Mensagem auth recebida sem token');
+    ws.send(JSON.stringify({ error: 'Token não fornecido' }));
     return;
   }
 
@@ -16,8 +17,13 @@ export async function handleAuth(ws, message, logger) {
 
     if (!userId) {
       logger.warn('[AUTH] Token JWT não contém user_id válido');
+      ws.send(JSON.stringify({ error: 'Token JWT inválido' }));
       return;
     }
+
+    // Retornar user_id para o cliente
+    ws.send(JSON.stringify({ user_id: userId }));
+    logger.info(`[AUTH] User ID ${userId} retornado para cliente`);
 
     // Verificar se já temos no cache
     if (userCache.has(userId)) {
@@ -41,5 +47,6 @@ export async function handleAuth(ws, message, logger) {
 
   } catch (error) {
     logger.error({ error: error.message }, '[AUTH] Falha ao processar autenticação');
+    ws.send(JSON.stringify({ error: 'Erro interno de autenticação' }));
   }
 }

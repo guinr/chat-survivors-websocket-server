@@ -33,7 +33,10 @@ function checkRateLimit(userId) {
 export function rateLimitMiddleware(data) {
   const { role } = data || {};
   const userId = data?.user?.id;
-  if (role === 'game') return true;
   
+  // Permitir sem rate limit para game e viewer sem userId (ex: auth)
+  if (role === 'game' || (role === 'viewer' && !userId)) return true;
+  
+  // Aplicar rate limit para outros casos
   return checkRateLimit(userId);
 }

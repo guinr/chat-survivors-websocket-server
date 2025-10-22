@@ -50,6 +50,7 @@ describe('handleAuth', () => {
     await handleAuth(mockWs, message, mockLogger);
 
     expect(mockLogger.warn).toHaveBeenCalledWith('[AUTH] Mensagem auth recebida sem token');
+    expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ error: 'Token não fornecido' }));
     expect(userCache.has).not.toHaveBeenCalled();
   });
 
@@ -62,6 +63,7 @@ describe('handleAuth', () => {
       { error: expect.any(String) },
       '[AUTH] Falha ao processar autenticação'
     );
+    expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ error: 'Erro interno de autenticação' }));
     expect(userCache.has).not.toHaveBeenCalled();
   });
 
@@ -75,7 +77,9 @@ describe('handleAuth', () => {
 
     await handleAuth(mockWs, message, mockLogger);
 
+    expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ user_id: '12345' }));
     expect(userCache.has).toHaveBeenCalledWith('12345');
+    expect(mockLogger.info).toHaveBeenCalledWith('[AUTH] User ID 12345 retornado para cliente');
     expect(mockLogger.info).toHaveBeenCalledWith('[AUTH] Usuário 12345 já está no cache');
     expect(getTwitchAccessToken).not.toHaveBeenCalled();
   });
@@ -95,10 +99,12 @@ describe('handleAuth', () => {
 
     await handleAuth(mockWs, message, mockLogger);
 
+    expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ user_id: '12345' }));
     expect(userCache.has).toHaveBeenCalledWith('12345');
     expect(getTwitchAccessToken).toHaveBeenCalled();
     expect(fetchTwitchUserInfo).toHaveBeenCalledWith('12345', 'access_token_123');
     expect(userCache.set).toHaveBeenCalledWith('12345', 'TestUser');
+    expect(mockLogger.info).toHaveBeenCalledWith('[AUTH] User ID 12345 retornado para cliente');
     expect(mockLogger.info).toHaveBeenCalledWith('[AUTH] Buscando display_name para usuário 12345');
     expect(mockLogger.info).toHaveBeenCalledWith('[AUTH] Display_name \'TestUser\' armazenado para usuário 12345');
   });
@@ -115,6 +121,7 @@ describe('handleAuth', () => {
 
     await handleAuth(mockWs, message, mockLogger);
 
+    expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ user_id: '12345' }));
     expect(userCache.set).not.toHaveBeenCalled();
     expect(mockLogger.warn).toHaveBeenCalledWith('[AUTH] Usuário 12345 não encontrado na API do Twitch');
   });
@@ -130,10 +137,12 @@ describe('handleAuth', () => {
 
     await handleAuth(mockWs, message, mockLogger);
 
+    expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ user_id: '12345' }));
     expect(mockLogger.error).toHaveBeenCalledWith(
       { error: 'API Error' },
       '[AUTH] Falha ao processar autenticação'
     );
+    expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ error: 'Erro interno de autenticação' }));
     expect(userCache.set).not.toHaveBeenCalled();
   });
 
@@ -150,6 +159,7 @@ describe('handleAuth', () => {
 
     await handleAuth(mockWs, message, mockLogger);
 
+    expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ user_id: '104220681' }));
     expect(userCache.has).toHaveBeenCalledWith('104220681');
     expect(userCache.set).toHaveBeenCalledWith('104220681', 'RealUser');
   });
