@@ -157,9 +157,20 @@ function handleAuth(ws, data) {
     return;
   }
 
+  console.log('JWT_SECRET is configured (length:', JWT_SECRET.length, 'chars)');
+  console.log('JWT_SECRET starts with:', JWT_SECRET.substring(0, 10) + '...');
+
   // Verify and validate JWT token
   try {
     console.log('Attempting to verify JWT token...');
+    console.log('Token preview:', token.substring(0, 50) + '...');
+    
+    // Decode without verification to see token contents
+    const decodedNoVerify = jwt.decode(token, { complete: true });
+    console.log('Token header:', JSON.stringify(decodedNoVerify?.header));
+    console.log('Token payload (unverified):', JSON.stringify(decodedNoVerify?.payload, null, 2));
+    
+    // Now verify with secret
     const decoded = jwt.verify(token, JWT_SECRET);
     
     console.log('JWT signature valid. Decoded token:', JSON.stringify(decoded, null, 2));
