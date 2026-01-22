@@ -7,7 +7,7 @@ const http = require('http');
 // ============================================================================
 
 const PORT = process.env.PORT || 8080;
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET ? Buffer.from(process.env.JWT_SECRET, 'base64') : null;
 
 // ============================================================================
 // CONNECTION STORAGE
