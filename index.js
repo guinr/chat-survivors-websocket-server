@@ -152,28 +152,14 @@ function handleAuth(ws, data) {
 
   // Check if JWT_SECRET is configured
   if (!JWT_SECRET) {
-    console.error('Auth failed: JWT_SECRET not configured in environment variables!');
+    console.error('Auth failed: JWT_SECRET not configured');
     ws.send(JSON.stringify({ event: 'auth_error', reason: 'server_error' }));
     return;
   }
 
-  console.log('JWT_SECRET is configured (length:', JWT_SECRET.length, 'bytes)');
-  console.log('JWT_SECRET preview:', JWT_SECRET.toString('hex').substring(0, 20) + '...');
-
   // Verify and validate JWT token
   try {
-    console.log('Attempting to verify JWT token...');
-    console.log('Token preview:', token.substring(0, 50) + '...');
-    
-    // Decode without verification to see token contents
-    const decodedNoVerify = jwt.decode(token, { complete: true });
-    console.log('Token header:', JSON.stringify(decodedNoVerify?.header));
-    console.log('Token payload (unverified):', JSON.stringify(decodedNoVerify?.payload, null, 2));
-    
-    // Now verify with secret
     const decoded = jwt.verify(token, JWT_SECRET);
-    
-    console.log('JWT signature valid. Decoded token:', JSON.stringify(decoded, null, 2));
     
     if (!decoded) {
       console.log('Auth failed: Token decoded to null/undefined');
@@ -192,7 +178,7 @@ function handleAuth(ws, data) {
     const realUserId = decoded.user_id;
 
     if (!realUserId) {
-      console.log('Auth failed: user_id not found in token. Token contents:', JSON.stringify(decoded, null, 2));
+      console.log('Auth failed: user_id not found in token');
       ws.send(JSON.stringify({ event: 'auth_error', reason: 'user_not_shared' }));
       return;
     }
@@ -210,22 +196,10 @@ function handleAuth(ws, data) {
     ws.send(JSON.stringify({ event: 'auth_ok' }));
 
   } catch (error) {
-    console.error('JWT validation error:', error.name);
-    console.error('   Error message:', error.message);
-    
-    // Provide more specific error messages
-    if (error.name === 'JsonWebTokenError') {
-      console.error('   Token format is invalid or signature doesn\'t match');
-    } else if (error.name === 'TokenExpiredError') {
-      console.error('   Token has expired');
-    } else if (error.name === 'NotBeforeError') {
-      console.error('   Token not active yet');
-    }
-    
+    console.error('JWT validation error:', error.name, '-', error.message);
     ws.send(JSON.stringify({ 
       event: 'auth_error', 
-      reason: 'invalid_token',
-      details: error.message 
+      reason: 'invalid_token'
     }));
   }
 }
