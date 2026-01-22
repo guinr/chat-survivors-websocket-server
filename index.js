@@ -145,22 +145,35 @@ function handleAuth(ws, data) {
 
   // Check if token is present
   if (!token) {
+    console.log('Auth failed: Token is missing');
     ws.send(JSON.stringify({ event: 'auth_error', reason: 'missing_token' }));
+    return;
+  }
+
+  // Check if JWT_SECRET is configured
+  if (!JWT_SECRET) {
+    console.error('Auth failed: JWT_SECRET not configured in environment variables!');
+    ws.send(JSON.stringify({ event: 'auth_error', reason: 'server_error' }));
     return;
   }
 
   // Verify and validate JWT token
   try {
+    console.log('Attempting to verify JWT token...');
     const decoded = jwt.verify(token, JWT_SECRET);
     
+    console.log('JWT signature valid. Decoded token:', JSON.stringify(decoded, null, 2));
+    
     if (!decoded) {
+      console.log('Auth failed: Token decoded to null/undefined');
       ws.send(JSON.stringify({ event: 'auth_error', reason: 'invalid_token' }));
       return;
     }
 
     // Validate token expiration
     if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
-      ws.send(JSON.stringify({ event: 'auth_error', reason: 'invalid_token' }));
+      console.log(`Auth failed: Token expired (exp: ${decoded.exp}, now: ${Math.floor(Date.now() / 1000)})`);
+      ws.send(JSON.stringify({ event: 'auth_error', reason: 'token_expired' }));
       return;
     }
 
@@ -168,6 +181,7 @@ function handleAuth(ws, data) {
     const realUserId = decoded.user_id;
 
     if (!realUserId) {
+      console.log('Auth failed: user_id not found in token. Token contents:', JSON.stringify(decoded, null, 2));
       ws.send(JSON.stringify({ event: 'auth_error', reason: 'user_not_shared' }));
       return;
     }
@@ -185,8 +199,23 @@ function handleAuth(ws, data) {
     ws.send(JSON.stringify({ event: 'auth_ok' }));
 
   } catch (error) {
-    console.error('JWT validation error:', error);
-    ws.send(JSON.stringify({ event: 'auth_error', reason: 'invalid_token' }));
+    console.error('JWT validation error:', error.name);
+    console.error('   Error message:', error.message);
+    
+    // Provide more specific error messages
+    if (error.name === 'JsonWebTokenError') {
+      console.error('   Token format is invalid or signature doesn\'t match');
+    } else if (error.name === 'TokenExpiredError') {
+      console.error('   Token has expired');
+    } else if (error.name === 'NotBeforeError') {
+      console.error('   Token not active yet');
+    }
+    
+    ws.send(JSON.stringify({ 
+      event: 'auth_error', 
+      reason: 'invalid_token',
+      details: error.message 
+    }));
   }
 }
 
