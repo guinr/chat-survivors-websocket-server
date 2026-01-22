@@ -157,8 +157,8 @@ function handleAuth(ws, data) {
     return;
   }
 
-  console.log('JWT_SECRET is configured (length:', JWT_SECRET.length, 'chars)');
-  console.log('JWT_SECRET starts with:', JWT_SECRET.substring(0, 10) + '...');
+  console.log('JWT_SECRET is configured (length:', JWT_SECRET.length, 'bytes)');
+  console.log('JWT_SECRET preview:', JWT_SECRET.toString('hex').substring(0, 20) + '...');
 
   // Verify and validate JWT token
   try {
