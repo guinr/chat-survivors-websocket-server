@@ -1,0 +1,218 @@
+const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+const PORT = process.env.PORT || 8080;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// ============================================================================
+// CONNECTION STORAGE
+// ============================================================================
+
+// Map: userId (real Twitch user_id) -> WebSocket connection (extension clients)
+const extensionClients = new Map();
+
+// Reference to the game server connection (single connection)
+let gameConnection = null;
+
+// ============================================================================
+// WEBSOCKET SERVER
+// ============================================================================
+
+const wss = new WebSocket.Server({ port: PORT });
+
+wss.on('listening', () => {
+  console.log(`WebSocket server listening on port ${PORT}`);
+});
+
+wss.on('connection', (ws) => {
+  console.log('New connection established');
+
+  // Track authentication status
+  ws.isAuthenticated = false;
+  ws.userId = null;
+  ws.isGame = false;
+
+  // Handle incoming messages
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      handleMessage(ws, data);
+    } catch (error) {
+      console.error('Failed to parse message:', error);
+      ws.send(JSON.stringify({ event: 'error', reason: 'invalid_json' }));
+    }
+  });
+
+  // Handle disconnection
+  ws.on('close', () => {
+    if (ws.isGame) {
+      console.log('Game server disconnected');
+      gameConnection = null;
+    } else if (ws.userId) {
+      console.log(`Extension client disconnected: ${ws.userId}`);
+      extensionClients.delete(ws.userId);
+    }
+  });
+
+  // Handle errors
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+});
+
+// ============================================================================
+// MESSAGE HANDLER
+// ============================================================================
+
+function handleMessage(ws, data) {
+  const { event } = data;
+
+  // Special case: Game server authentication
+  if (event === 'game_auth') {
+    handleGameAuth(ws, data);
+    return;
+  }
+
+  // Handle authentication for extension clients
+  if (event === 'auth') {
+    handleAuth(ws, data);
+    return;
+  }
+
+  // All other events require authentication
+  if (!ws.isAuthenticated) {
+    ws.send(JSON.stringify({ event: 'auth_error', reason: 'not_authenticated' }));
+    return;
+  }
+
+  // Route events based on sender
+  if (ws.isGame) {
+    // Events from game -> route to extension client
+    routeToExtension(data);
+  } else {
+    // Events from extension -> route to game
+    routeToGame(ws, data);
+  }
+}
+
+// ============================================================================
+// AUTHENTICATION HANDLERS
+// ============================================================================
+
+function handleGameAuth(ws, data) {
+  // Local game server authentication (no validation needed for local development)
+  ws.isGame = true;
+  ws.isAuthenticated = true;
+  gameConnection = ws;
+  console.log('Game server authenticated');
+}
+
+function handleAuth(ws, data) {
+  const { token, userId } = data;
+
+  // Check if token is present
+  if (!token) {
+    ws.send(JSON.stringify({ event: 'auth_error', reason: 'missing_token' }));
+    return;
+  }
+
+  // Verify and validate JWT token
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    if (!decoded) {
+      ws.send(JSON.stringify({ event: 'auth_error', reason: 'invalid_token' }));
+      return;
+    }
+
+    // Validate token expiration
+    if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
+      ws.send(JSON.stringify({ event: 'auth_error', reason: 'invalid_token' }));
+      return;
+    }
+
+    // Extract user_id from token (only authenticated Twitch users have this)
+    const realUserId = decoded.user_id;
+
+    if (!realUserId) {
+      ws.send(JSON.stringify({ event: 'auth_error', reason: 'user_not_shared' }));
+      return;
+    }
+
+    // Associate connection with userId
+    ws.userId = realUserId;
+    ws.isAuthenticated = true;
+
+    // Store connection in map
+    extensionClients.set(realUserId, ws);
+
+    console.log(`Extension client authenticated: ${realUserId}`);
+
+    // Send success response
+    ws.send(JSON.stringify({ event: 'auth_ok' }));
+
+  } catch (error) {
+    console.error('JWT validation error:', error);
+    ws.send(JSON.stringify({ event: 'auth_error', reason: 'invalid_token' }));
+  }
+}
+
+// ============================================================================
+// ROUTING FUNCTIONS
+// ============================================================================
+
+function routeToGame(ws, data) {
+  // Forward event from extension to game server
+  if (!gameConnection || gameConnection.readyState !== WebSocket.OPEN) {
+    console.log('Game server not connected, cannot route event');
+    return;
+  }
+
+  // Add userId to the payload so game knows who sent it
+  const payload = {
+    ...data,
+    userId: ws.userId
+  };
+
+  console.log(`Routing to game: ${data.event} from ${ws.userId}`);
+  gameConnection.send(JSON.stringify(payload));
+}
+
+function routeToExtension(data) {
+  // Route event from game to the appropriate extension client
+  const { userId, event } = data;
+
+  if (!userId) {
+    console.error('Game sent event without userId:', event);
+    return;
+  }
+
+  const client = extensionClients.get(userId);
+
+  if (!client || client.readyState !== WebSocket.OPEN) {
+    console.log(`Extension client not connected: ${userId}`);
+    return;
+  }
+
+  // Remove userId from payload before sending to extension
+  const { userId: _, ...payload } = data;
+
+  console.log(`Routing to extension: ${event} to ${userId}`);
+  client.send(JSON.stringify(payload));
+}
+
+// ============================================================================
+// ERROR HANDLING
+// ============================================================================
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
+
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled rejection:', error);
+});

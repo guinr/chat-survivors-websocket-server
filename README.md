@@ -1,86 +1,65 @@
 # Chat Survivors WebSocket Server
 
-Servidor WebSocket em tempo real para comunicação entre extensões Twitch e o jogo Chat Survivors.
+WebSocket server that routes messages between Twitch extension clients and the game server.
 
-## ✨ O que faz
+## Architecture
 
-- 🚀 **Comunicação instantânea** entre extensões Twitch e jogo
-- 🔐 **Autenticação segura** via JWT para extensões
-- ⚡ **Rate limiting** para proteção contra abuso
-- 📊 **Logging estruturado** para monitoramento
-- 🧪 **100% testado** com cobertura completa
-- 🏥 **Health check** endpoint para monitoramento
+- **Stateless**: No data persistence or storage
+- **Router only**: Forwards messages between extension and game
+- **Game is source of truth**: Server never modifies or stores game state
 
-## 🛠️ Stack
-
-- **Node.js** 20+ • **WebSocket** • **JWT** • **Vitest**
-
-## ⚡ Quick Start
-
-**Pré-requisitos:** Node.js 20+ e credenciais Twitch
+## Installation
 
 ```bash
-# Setup
-git clone https://github.com/guinr/chat-survivors-websocket-server.git
-cd chat-survivors-websocket-server
-yarn install
-
-# Configurar .env (copie de .env.example)
-cp .env.example .env
-# Edite .env com suas credenciais Twitch
-
-# Executar
-yarn start              # Produção
-yarn dev               # Desenvolvimento
-yarn test              # Testes
+npm install
 ```
 
-## 📡 Conexão
+## Configuration
 
-**WebSocket:** `ws://localhost:8080`  
-**Health Check:** `http://localhost:8080/health`  
-**API Info:** `http://localhost:8080/`
+Copy `.env.example` to `.env` and configure:
 
-**Autenticação:**
-- `viewer` / `game` → Acesso público
-- `extension` → Token JWT obrigatório
+```
+PORT=3000
+JWT_SECRET=your-twitch-client-secret
+```
 
-## 🚀 Deploy no Render
+- `JWT_SECRET`: Your Twitch extension client secret (found in Twitch Developer Console)
 
-### Configuração rápida:
-
-1. **Fork** este repositório
-2. **Conecte** no [Render Dashboard](https://dashboard.render.com)
-3. **Crie** novo Web Service
-4. **Configure**:
-   - **Build Command**: `yarn install`
-   - **Start Command**: `yarn start`
-   - **Health Check Path**: `/health`
-
-### Variáveis de ambiente obrigatórias:
+## Running
 
 ```bash
-TWITCH_CLIENT_ID=seu_client_id_aqui
-TWITCH_CLIENT_SECRET=seu_client_secret_aqui
-NODE_ENV=production
-LOG_LEVEL=info
+# Production
+npm start
+
+# Development (with auto-reload)
+npm run dev
 ```
 
-### URLs após deploy:
-- **WebSocket**: `wss://your-app.onrender.com`
-- **Health Check**: `https://your-app.onrender.com/health`
-- **API Info**: `https://your-app.onrender.com/`
+## How It Works
 
-## 📋 Qualidade
+### Extension Client Flow
+1. Extension connects to WebSocket server
+2. Sends `auth` event with Twitch JWT token
+3. Server validates token and responds with `auth_ok` or `auth_error`
+4. Extension can now send events: `shop`, `buy`, `play`, `str`, `agi`, `vit`, `luc`, `sell`, `equip`, `report`
+5. Server forwards these events to the game (with userId attached)
+6. Server routes responses (`shop_display`, `status`) back to the correct extension client
 
-**Segurança:** Rate limiting • JWT validation • DDoS protection • Security logging  
-**Testes:** 100% coverage • Automated testing • Unit tests  
-**Código:** ESM modules • Structured logging • Comprehensive documentation
+### Game Server Flow
+1. Game connects to WebSocket server
+2. Sends `game_auth` event
+3. Server stores game connection (no validation for local development)
+4. Game receives events from extension clients (with userId)
+5. Game sends response events with userId
+6. Server routes responses to the correct extension client
 
-## 📝 Licença
+## Event Contract
 
-MIT - veja [LICENSE](LICENSE) para detalhes.
+All events follow the contract defined in `events.csv`:
 
----
-
-**Desenvolvido por [Digi](https://github.com/guinr)**
+- **auth** (extension → server): Authenticate user
+- **auth_ok/auth_error** (server → extension): Auth response
+- **shop, buy, play, report** (extension → game): Player actions
+- **str, agi, vit, luc** (extension → game): Stat increases
+- **sell, equip** (extension → game): Inventory actions
+- **shop_display, status** (game → extension): State snapshots

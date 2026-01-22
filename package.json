@@ -1,47 +1,20 @@
 {
   "name": "chat-survivors-websocket-server",
   "version": "1.0.0",
-  "description": "Servidor WebSocket para jogo e extensões Twitch",
-  "main": "src/index.js",
-  "type": "module",
+  "description": "WebSocket server for Chat Survivors - routes messages between Twitch extension and game",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
-    "dev:clean": "node scripts/dev-clean.js",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
-    "test:coverage:watch": "vitest run --coverage",
-    "simulate": "node simulators/run-all.js",
-    "simulate:game": "node simulators/game-simulator.js",
-    "simulate:extensions": "node simulators/extension-simulator.js",
-    "simulate:viewers": "node simulators/viewer-simulator.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
-  "keywords": [
-    "websocket",
-    "game",
-    "twitch",
-    "nodejs"
-  ],
-  "author": "Digi",
+  "keywords": ["websocket", "twitch", "game"],
+  "author": "",
   "license": "MIT",
-  "engines": {
-    "node": ">=20.19.0"
-  },
   "dependencies": {
-    "dotenv": "^16.3.1",
-    "jsonwebtoken": "^9.0.2",
-    "node-fetch": "^3.3.2",
-    "pino": "9.9.0",
-    "pino-pretty": "^13.1.1",
-    "ws": "^8.17.0",
-    "zod": "^3.23.2"
+    "ws": "^8.18.0",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^3.2.4",
-    "@vitest/ui": "^3.2.4",
-    "nodemon": "^3.0.2",
-    "vitest": "^3.2.4"
+    "nodemon": "^3.1.7"
   }
 }
