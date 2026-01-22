@@ -1,5 +1,6 @@
 const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
+const http = require('http');
 
 // ============================================================================
 // CONFIGURATION
@@ -19,13 +20,41 @@ const extensionClients = new Map();
 let gameConnection = null;
 
 // ============================================================================
+// HTTP SERVER (for health check)
+// ============================================================================
+
+const server = http.createServer((req, res) => {
+  if (req.url === '/health' && req.method === 'GET') {
+    const healthStatus = {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      websocket: {
+        port: PORT,
+        running: wss.clients.size !== undefined,
+        connectedClients: wss.clients.size,
+        extensionClients: extensionClients.size,
+        gameServerConnected: gameConnection !== null && gameConnection.readyState === WebSocket.OPEN
+      }
+    };
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(healthStatus, null, 2));
+  } else {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not Found');
+  }
+});
+
+// ============================================================================
 // WEBSOCKET SERVER
 // ============================================================================
 
-const wss = new WebSocket.Server({ port: PORT });
+const wss = new WebSocket.Server({ server });
 
-wss.on('listening', () => {
-  console.log(`WebSocket server listening on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+  console.log(`WebSocket available at ws://localhost:${PORT}`);
+  console.log(`Health check available at http://localhost:${PORT}/health`);
 });
 
 wss.on('connection', (ws) => {
