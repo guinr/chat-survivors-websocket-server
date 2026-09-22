@@ -65,6 +65,17 @@ wss.on('connection', (ws) => {
   ws.userId = null;
   ws.isGame = false;
 
+  // Render's edge proxy was silently dropping idle connections (~10s after
+  // auth, seen in production logs) without the client ever seeing a close
+  // frame - the client-side heartbeat (Godot's heartbeat_interval) sends
+  // pings server-ward, but that alone wasn't enough, so the server now also
+  // pings each client periodically. WS ping/pong is handled automatically
+  // by both Godot's WebSocketPeer and browsers' native WebSocket, no
+  // client-side changes needed. Also doubles as dead-connection cleanup
+  // (a client that never pongs back gets terminated).
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+
   // Handle incoming messages
   ws.on('message', (message) => {
     try {
@@ -92,6 +103,18 @@ wss.on('connection', (ws) => {
     console.error('WebSocket error:', error);
   });
 });
+
+const HEARTBEAT_INTERVAL_MS = 15000;
+setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log('Terminating dead connection (no pong received)');
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, HEARTBEAT_INTERVAL_MS);
 
 // ============================================================================
 // MESSAGE HANDLER
