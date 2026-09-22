@@ -104,6 +104,17 @@ wss.on('connection', (ws) => {
   });
 });
 
+// Protocol-level ws.ping()/pong() alone wasn't enough to survive Render's
+// edge proxy (production logs kept showing the game connection dying
+// ~15-17s after auth, right around one heartbeat interval, with none of
+// this file's own "Terminating dead connection" log ever printing - so it
+// wasn't even this code closing it, the proxy was) - some edge proxies only
+// count actual data frames as "activity" for their idle timeout, not
+// protocol-level ping/pong control frames. Belt and suspenders: keep the
+// native ping/pong for real dead-connection detection, but also push a
+// real text frame every interval. "status_broadcast" is already a
+// recognized no-op event in websocket_client.gd's _on_message_received
+// (and safely ignored by anything else), so no client-side changes needed.
 const HEARTBEAT_INTERVAL_MS = 15000;
 setInterval(() => {
   wss.clients.forEach((ws) => {
@@ -113,6 +124,9 @@ setInterval(() => {
     }
     ws.isAlive = false;
     ws.ping();
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ event: 'status_broadcast' }));
+    }
   });
 }, HEARTBEAT_INTERVAL_MS);
 
