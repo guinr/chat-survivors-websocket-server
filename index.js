@@ -9,6 +9,21 @@ const http = require('http');
 const PORT = process.env.PORT || 8080;
 const JWT_SECRET = process.env.JWT_SECRET ? Buffer.from(process.env.JWT_SECRET, 'base64') : null;
 
+// Lets an external watchdog (see chat-survivors' ~/stream-test/watchdog.py)
+// force this process to restart without needing dashboard access - Render
+// restarts a web service automatically whenever its process exits, same as
+// clicking "Restart service" in the dashboard. Added 2026-09-25: the game's
+// connection to this server was observed going stale (gameConnection stuck
+// while the underlying socket still looked alive) with no in-process way to
+// detect/self-heal it server-side, and dashboard actions require a person
+// present. Query-param secret, not a real auth scheme - this only needs to
+// stop a stranger who finds the URL from being able to bounce the service,
+// not resist a determined attacker. Must be set via the ADMIN_RESTART_SECRET
+// env var in Render's dashboard (Environment tab) - deliberately no
+// hardcoded fallback here, this file is public-ish source, not a secret
+// store. The endpoint refuses all requests until it's set.
+const ADMIN_RESTART_SECRET = process.env.ADMIN_RESTART_SECRET || null;
+
 // ============================================================================
 // CONNECTION STORAGE
 // ============================================================================
@@ -24,6 +39,21 @@ let gameConnection = null;
 // ============================================================================
 
 const server = http.createServer((req, res) => {
+  if (req.url.startsWith('/admin/restart') && req.method === 'GET') {
+    const providedSecret = new URL(req.url, `http://${req.headers.host}`).searchParams.get('secret');
+    if (!ADMIN_RESTART_SECRET || providedSecret !== ADMIN_RESTART_SECRET) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden');
+      return;
+    }
+    console.log('Restart requested via /admin/restart - exiting so the platform restarts this process.');
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Restarting...');
+    // Let the response actually flush to the socket before exiting.
+    setTimeout(() => process.exit(0), 200);
+    return;
+  }
+
   if (req.url === '/health' && req.method === 'GET') {
     const healthStatus = {
       status: 'ok',
